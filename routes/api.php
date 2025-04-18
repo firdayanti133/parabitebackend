@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Cms\MerchantController;
+use App\Http\Controllers\Cms\MenuController as MerchantMenuController;
+use App\Http\Controllers\Cms\FoodController;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -35,5 +37,17 @@ Route::prefix('cms')->group(function () {
         Route::post('/', [MerchantController::class, 'createMerchant']);
         Route::put('/{id}', [MerchantController::class, 'updateMerchant']);
         Route::delete('/{id}', [MerchantController::class, 'deleteMerchant']);
+
+        Route::prefix('menu')->group(function () {
+            Route::get('/{merchant_id}', [MerchantMenuController::class, 'getAllMenus']);
+            Route::post('/{merchant_id}', [MerchantMenuController::class, 'createMenu']);
+            Route::put('/{merchant_id}/{id}', [MerchantMenuController::class, 'updateMenu']);
+            Route::delete('/{merchant_id}/{id}', [MerchantMenuController::class, 'deleteMenu']);
+        }); 
+    });
+
+    Route::prefix('food')->group(function () {
+        Route::get('/', [FoodController::class, 'getAllFoods']);
+        Route::post('/', [FoodController::class, 'createFood']);
     });
 });

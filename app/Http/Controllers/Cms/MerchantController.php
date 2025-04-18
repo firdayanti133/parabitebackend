@@ -64,7 +64,7 @@ class MerchantController extends Controller
             ], 201);
         } catch (Exception $e) {
             return response()->json([
-                'message' => 'error',
+                'message' => 'error: ' . $e,
                 'status' => 500,
                 'data' => null
             ], 500);
@@ -89,6 +89,7 @@ class MerchantController extends Controller
             'owner_id' => 'required|integer|exists:users,id',
             'password' => 'sometimes|string|min:6',
             'logo' => 'sometimes|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'status' => 'sometimes|string|in:open,closed',
         ]);
 
         if ($validator->fails()) {
@@ -107,6 +108,10 @@ class MerchantController extends Controller
 
         if ($request->password) {
             $data['password'] = Hash::make($request->password);
+        }
+
+        if ($request->status) {
+            $data['status'] = $request->status;
         }
 
         try {
