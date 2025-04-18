@@ -19,7 +19,7 @@ return new class extends Migration
             $table->integer('total_price');
             $table->string('order_type')->enum(['delivery', 'takeaway', 'dine-in']);
             $table->string('payment_method')->enum(['qris', 'cash']);
-            $table->string('status')->enum(['pending', 'delivered', 'cancelled']);
+            $table->string('status')->enum(['waiting', 'confirmed', 'processing', 'done', 'cancelled'])->default('waiting');
             $table->timestamps();
         });
     }
