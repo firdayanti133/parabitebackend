@@ -5,6 +5,7 @@ use App\Http\Controllers\Cms\MerchantController;
 use App\Http\Controllers\Cms\MenuController as MerchantMenuController;
 use App\Http\Controllers\Cms\FoodController;
 use App\Http\Controllers\User\MenuController as PublicMenuController;
+use App\Http\Controllers\User\LocationController as PublicLocationController;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -28,11 +29,13 @@ Route::middleware(['jwt.auth'])->group(function () {
 
 });
 
-Route::get('/', [AuthController::class, 'test']);
+Route::prefix('public')->group(function () {
+    Route::get('/menu', [PublicMenuController::class, 'getAllMenus']);
+    Route::get('/location', [PublicLocationController::class, 'getLocations']);
+});
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
-
-Route::get('/menu', [PublicMenuController::class, 'getAllMenus']);
 
 Route::prefix('cms')->group(function () {
     Route::prefix('merchant')->group(function () {
