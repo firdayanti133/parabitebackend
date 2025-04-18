@@ -16,6 +16,8 @@ return new class extends Migration
             $table->unsignedBigInteger('owner_id')->references('id')->on('users');
             $table->string('name');
             $table->string('logo');
+            $table->string('password');
+            $table->string('status')->enum(['open', 'closed'])->default('closed');
             $table->timestamps();
         });
     }
