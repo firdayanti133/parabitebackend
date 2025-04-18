@@ -7,17 +7,24 @@ use App\Models\Order;
 use App\Models\MerchantMenu;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Models\OrderList;
 
 class OrderController extends Controller
 {
     public function createOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'menu_id' => 'required|exists:merchant_menu_list,id',
-            'quantity' => 'required|integer|min:1',
+            'menu_id' => 'required|array|exists:merchant_menu_list,id',
+            'quantity' => 'required|array|min:1',
             'order_type' => 'required|in:pickup,delivery',
             'payment_method' => 'required|in:qris,cash',
-            'delivery_location' => 'nullable|string'
+            'delivery_location' => 'nullable|string',
+            'merchant_id' => 'required|exists:merchants,id',
+            'user_id' => 'required|exists:users,id',
+            'location_id' => 'required|exists:locations,id',
+            'total_price' => 'required|integer|min:1',
+            'food_id' => 'required|array|exists:foods,id',
+            
         ]);
 
         if ($validator->fails()) {
@@ -29,25 +36,33 @@ class OrderController extends Controller
         }
 
         $menu = MerchantMenu::find($request->menu_id);
-        $subtotal = $menu->price * $request->quantity;
-
+       
         $order = Order::create([
-            'user_id' => Auth::id(), // pastikan user login pakai JWT
-            'menu_id' => $menu->id,
-            'quantity' => $request->quantity,
-            'subtotal' => $subtotal,
-            'scheduled_time' => $request->scheduled_time,
+            'user_id' => $request->user_id, 
+            'merchant_id' => $request->merchant_id,
+            'scheduled_time' => $request->scheduled_time, 
             'order_type' => $request->order_type,
             'payment_method' => $request->payment_method,
             'delivery_location' => $request->order_type === 'delivery' ? $request->delivery_location : null,
-            'status' => 'pending'
+            'status' => 'pending',
+            'location_id' => $request->location_id,
+            'total_price' => $request->total_price
         ]);
+
+        foreach ($request->menu_id as $menuId) {
+            OrderList::create([
+                'order_id' => $order->id,
+                'menu_id' => $menuId,
+                'quantity' => $request->quantity[$menuId],
+            ]);
+        }
 
         return response()->json([
             'message' => 'Order placed successfully',
             'data' => $order
         ], 201);
     }
+
     public function allOrders()
     {
         $orders = Order::with('user')->latest()->get(); // Optional: ambil relasi user
