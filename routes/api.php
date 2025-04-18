@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\Cms\MerchantController;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -22,9 +22,18 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::middleware(['jwt.auth'])->group(function () {
-    Route::get('/user', [UserController::class, 'profile']);
+
 });
 
 Route::get('/', [AuthController::class, 'test']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+
+Route::prefix('cms')->group(function () {
+    Route::prefix('merchant')->group(function () {
+        Route::get('/', [MerchantController::class, 'getAllMerchants']);
+        Route::post('/', [MerchantController::class, 'createMerchant']);
+        Route::put('/{id}', [MerchantController::class, 'updateMerchant']);
+        Route::delete('/{id}', [MerchantController::class, 'deleteMerchant']);
+    });
+});
