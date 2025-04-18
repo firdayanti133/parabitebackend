@@ -24,3 +24,4 @@ class Food extends Model
         'updated_at'
     ];
 }
+    

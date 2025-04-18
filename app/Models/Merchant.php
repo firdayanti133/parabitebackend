@@ -14,10 +14,19 @@ class Merchant extends Model
     protected $primaryKey = 'id';   
 
     protected $fillable = [
-        'owener_id',
+        'owner_id',
         'name',
+        'password',
         'logo',
         'created_at',
         'updated_at'
+    ];
+
+    protected $hidden = [
+        'password',
+    ];
+
+    protected $casts = [
+        'password' => 'hashed',
     ];
 }
