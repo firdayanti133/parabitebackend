@@ -15,7 +15,7 @@ class OrderList extends Model
 
     protected $fillable = [
         'order_id',
-        'food_id',
+        'menu_id',
         'quantity',
         'created_at',
         'updated_at'
