@@ -2,9 +2,10 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Cms\MerchantController;
-use App\Http\Controllers\Cms\MenuController as MerchantMenuController;
 use App\Http\Controllers\Cms\FoodController;
-use App\Http\Controllers\OrderController;
+use App\Http\Controllers\Cms\OrderController;
+use App\Http\Controllers\Cms\MenuController as MerchantMenuController;
+use App\Http\Controllers\OrderController as PublicOrderController;
 use App\Http\Controllers\User\MenuController as PublicMenuController;
 use App\Http\Controllers\User\LocationController as PublicLocationController;
 
@@ -51,6 +52,12 @@ Route::prefix('cms')->group(function () {
             Route::put('/{merchant_id}/{id}', [MerchantMenuController::class, 'updateMenu']);
             Route::delete('/{merchant_id}/{id}', [MerchantMenuController::class, 'deleteMenu']);
         }); 
+
+        Route::prefix('order')->group(function () {
+            Route::get('/{merchant_id}', [OrderController::class, 'getMerchantOrders']);
+            Route::put('/{id}', [OrderController::class, 'updateMerchantOrders']);
+            Route::delete('/{id}', [OrderController::class, 'deleteOrder']);
+        });
     });
 
     Route::prefix('food')->group(function () {
@@ -58,8 +65,8 @@ Route::prefix('cms')->group(function () {
         Route::post('/', [FoodController::class, 'createFood']);
     });
 });
-Route::post('/order', [OrderController::class, 'createOrder']);
-Route::get('/order', [OrderController::class, 'allOrders']);
-Route::get('/order/{id}', [OrderController::class, 'getOrder']);
-Route::put('/order/{id}', [OrderController::class, 'updateStatus']);
-Route::delete('/order/{id}', [OrderController::class, 'deleteOrder']);
+Route::post('/order', [PublicOrderController::class, 'createOrder']);
+Route::get('/order', [PublicOrderController::class, 'allOrders']);
+Route::get('/order/{id}', [PublicOrderController::class, 'getOrder']);
+Route::put('/order/{id}', [PublicOrderController::class, 'updateStatus']);
+Route::delete('/order/{id}', [PublicOrderController::class, 'deleteOrder']);

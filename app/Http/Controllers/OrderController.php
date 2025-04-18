@@ -14,11 +14,9 @@ class OrderController extends Controller
     public function createOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'menu_id' => 'required|array|exists:merchant_menu_list,id',
             'quantity' => 'required|array|min:1',
-            'order_type' => 'required|in:pickup,delivery',
+            'order_type' => 'required|in:delivery,takeaway,dine-in',
             'payment_method' => 'required|in:qris,cash',
-            'delivery_location' => 'nullable|string',
             'merchant_id' => 'required|exists:merchants,id',
             'user_id' => 'required|exists:users,id',
             'location_id' => 'required|exists:locations,id',
@@ -27,6 +25,12 @@ class OrderController extends Controller
             
         ]);
 
+        foreach ($request->menu_id as $menuId) {
+            $validator = Validator::make(['menu_id' => $menuId], [
+                'menu_id' => 'required|exists:merchant_menu_list,id',
+            ]);
+        }
+
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Validation Error',
@@ -34,8 +38,6 @@ class OrderController extends Controller
                 'errors' => $validator->errors()
             ], 422);
         }
-
-        $menu = MerchantMenu::find($request->menu_id);
        
         $order = Order::create([
             'user_id' => $request->user_id, 
@@ -43,8 +45,6 @@ class OrderController extends Controller
             'scheduled_time' => $request->scheduled_time, 
             'order_type' => $request->order_type,
             'payment_method' => $request->payment_method,
-            'delivery_location' => $request->order_type === 'delivery' ? $request->delivery_location : null,
-            'status' => 'pending',
             'location_id' => $request->location_id,
             'total_price' => $request->total_price
         ]);
@@ -65,7 +65,7 @@ class OrderController extends Controller
 
     public function allOrders()
     {
-        $orders = Order::with('user')->latest()->get(); // Optional: ambil relasi user
+        $orders = Order::with('user')->latest()->get();
         return response()->json([
             'message' => 'List of all orders',
             'data' => $orders
