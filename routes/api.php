@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\OrderController;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -28,3 +29,8 @@ Route::middleware(['jwt.auth'])->group(function () {
 Route::get('/', [AuthController::class, 'test']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/order', [OrderController::class, 'createOrder']);
+Route::get('/order', [OrderController::class, 'allOrders']);
+Route::get('/order/{id}', [OrderController::class, 'getOrder']);
+Route::put('/order/{id}', [OrderController::class, 'updateStatus']);
+Route::delete('/order/{id}', [OrderController::class, 'deleteOrder']);

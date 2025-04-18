@@ -14,9 +14,6 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function test() {
-        return response()->json(['success' => true]);
-    }
 
     public function register(Request $request)
 {
