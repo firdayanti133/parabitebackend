@@ -9,7 +9,13 @@ class Location extends Model
 {
     use HasFactory;
 
+    protected $table = 'locations';
+
+    protected $primaryKey = 'id';
+
     protected $fillable = [
         'name',
+        'created_at',
+        'updated_at'
     ];
 }

@@ -9,9 +9,15 @@ class OrderList extends Model
 {
     use HasFactory;
 
+    protected $table = 'order_list';
+
+    protected $primaryKey = 'id';
+
     protected $fillable = [
         'order_id',
         'food_id',
-        'quantity'
+        'quantity',
+        'created_at',
+        'updated_at'
     ];
 }

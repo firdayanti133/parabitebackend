@@ -9,11 +9,17 @@ class MerchantMenu extends Model
 {
     use HasFactory;
 
+    protected $table = 'merchant_menu_list';
+
+    protected $primaryKey = 'id';
+
     protected $fillable = [
         'merchant_id',
         'food_id',
         'stocks',
         'price',
-        'status'
+        'status',
+        'created_at',
+        'updated_at'
     ];
 }
