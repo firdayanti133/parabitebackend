@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('order_list', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('order_id')->references('id')->on('orders'); 
-            $table->unsignedBigInteger('food_id')->references('id')->on('foods');
+            $table->unsignedBigInteger('menu_id')->references('id')->on('merchant_menu_list');
             $table->integer('quantity');
             $table->timestamps();
         });
