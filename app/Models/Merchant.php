@@ -9,9 +9,15 @@ class Merchant extends Model
 {
     use HasFactory;
 
+    protected $table = 'merchants';
+
+    protected $primaryKey = 'id';   
+
     protected $fillable = [
         'owener_id',
         'name',
-        'logo'
+        'logo',
+        'created_at',
+        'updated_at'
     ];
 }

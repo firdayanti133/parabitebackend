@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class Food extends Model
 {
     use HasFactory;
+
+    protected $table = 'foods';
+
+    protected $primaryKey = 'id';
     
     protected $fillable = [
         'name',
@@ -15,6 +19,8 @@ class Food extends Model
         'image',
         'description',
         'type',
-        'nutrition_facts'
+        'nutrition_facts',
+        'created_at',
+        'updated_at'
     ];
 }
