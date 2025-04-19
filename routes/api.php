@@ -33,6 +33,7 @@ Route::middleware(['jwt.auth'])->group(function () {
 
 Route::prefix('public')->group(function () {
     Route::get('/menu', [PublicMenuController::class, 'getAllMenus']);
+    Route::get('/menu/{merchant_id}', [PublicMenuController::class, 'getMenusByMerchant']);
     Route::get('/location', [PublicLocationController::class, 'getLocations']);
 });
 
