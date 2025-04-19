@@ -14,15 +14,15 @@ class OrderController extends Controller
     public function createOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'quantity' => 'required|array|min:1',
-            'order_type' => 'required|in:delivery,takeaway,dine-in',
-            'payment_method' => 'required|in:qris,cash',
-            'merchant_id' => 'required|exists:merchants,id',
             'user_id' => 'required|exists:users,id',
+            'order_type' => 'required|in:delivery,takeaway,dine-in',
             'location_id' => 'required|exists:locations,id',
+            'payment_method' => 'required|in:qris,cash',
             'total_price' => 'required|integer|min:1',
-            'food_id' => 'required|array|exists:foods,id',
-            
+            'menu_id' => 'required|array|exists:merchant_menu_list,id',
+            'quantity' => 'required|array|min:1',
+            "is_preorder"=> 'required|boolean',
+            "preorder_timeset" => 'required_if:is_preorder,true',
         ]);
 
         foreach ($request->menu_id as $menuId) {
@@ -38,22 +38,26 @@ class OrderController extends Controller
                 'errors' => $validator->errors()
             ], 422);
         }
-       
+
+        $menu = MerchantMenu::where('id', $request->menu_id)->first();
+
         $order = Order::create([
             'user_id' => $request->user_id, 
-            'merchant_id' => $request->merchant_id,
-            'scheduled_time' => $request->scheduled_time, 
+            'merchant_id' => $menu->merchant_id,
+            'location_id' => $request->location_id,
+            'total_price' => $request->total_price,
             'order_type' => $request->order_type,
             'payment_method' => $request->payment_method,
-            'location_id' => $request->location_id,
-            'total_price' => $request->total_price
+            'status' => 'waiting',
+            'is_preorder' => $request->is_preorder,
+            'preorder_timeset' => $request->preorder_timeset
         ]);
 
         foreach ($request->menu_id as $menuId) {
             OrderList::create([
                 'order_id' => $order->id,
                 'menu_id' => $menuId,
-                'quantity' => $request->quantity[$menuId],
+                'quantity' => $request->quantity[array_search($menuId, $request->menu_id)],
             ]);
         }
 
