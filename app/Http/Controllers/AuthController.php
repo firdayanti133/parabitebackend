@@ -5,12 +5,11 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Exceptions\JWTException;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Exception;
 
 class AuthController extends Controller
 {
@@ -41,13 +40,9 @@ class AuthController extends Controller
         'password' => Hash::make($request->password),
     ]);
 
-    $token = JWTAuth::claims($customClaims)->fromUser($user);
-
     return response()->json([
         'message' => 'User successfully registered',
-        'access_token' => $token,
-        'token_type' => 'bearer',
-        'user' => $user
+        'status' => 201,
     ], 201);
 }
 
@@ -68,18 +63,44 @@ class AuthController extends Controller
 
          $credentials = $request->only('email', 'password');
 
-        try {
-            if (!$token = JWTAuth::attempt($credentials)) {
-                return response()->json(['error' => 'Invalid credentials'], 401);
-            }
-        } catch (JWTException $e) {
-            return response()->json(['error' => 'Could not create token'], 500);
-        }
+         try {
+            $validate = User::where('email', $credentials['email'])->firstOrFail();
 
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'user' => Auth::user()
-        ]);
+            if (!$validate) {
+                return response()->json([
+                    'message' => 'User Not Found',
+                    'status' => 404,
+                ], 404);
+            } else {
+                $pass = Hash::check($credentials['password'], $validate->password);
+
+                if (!$pass) {
+                    return response()->json([
+                        'message' => 'Invalid Password',
+                        'status' => 401,
+                    ], 401);
+                }
+            }
+
+            $customClaims = [
+                'exp' => now()->addDays(3)->timestamp,
+            ];
+
+            $token = JWTAuth::claims($customClaims)->fromUser($validate);
+
+            return response()->json([
+                'message' => 'User successfully logged in',
+                'status' => 200,
+                'token' => $token,
+                'token_type' => 'bearer',
+                'user' => $validate
+            ], 200);
+        
+         } catch (Exception $e) {
+            return response()->json([
+                'message' => 'User Not Found',
+                'status' => 404,
+            ], 404);
+        }
     }
 }
