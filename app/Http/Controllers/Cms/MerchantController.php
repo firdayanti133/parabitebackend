@@ -27,7 +27,6 @@ class MerchantController extends Controller
     public function createMerchant(Request $request) {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'user_id' => 'required|integer|exists:users,id',
             'password' => 'required|string|min:6',
             'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
@@ -41,7 +40,6 @@ class MerchantController extends Controller
         }
 
         $data = [
-            'owner_id' => $request->user_id,
             'name' => $request->name,
         ];
 

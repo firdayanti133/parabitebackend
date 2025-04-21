@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('merchants', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('owner_id')->references('id')->on('users');
             $table->string('name');
             $table->string('logo');
             $table->string('password');

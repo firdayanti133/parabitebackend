@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Cms\MerchantController;
 use App\Http\Controllers\Cms\FoodController;
 use App\Http\Controllers\Cms\OrderController;
+use App\Http\Controllers\Cms\MerchantAuthController;
 use App\Http\Controllers\Cms\MenuController as MerchantMenuController;
 use App\Http\Controllers\OrderController as PublicOrderController;
 use App\Http\Controllers\User\MenuController as PublicMenuController;
@@ -38,6 +39,7 @@ Route::prefix('public')->group(function () {
 });
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login/merchant', [MerchantAuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
 Route::prefix('cms')->group(function () {

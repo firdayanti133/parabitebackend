@@ -70,24 +70,48 @@ class MerchantAuthController extends Controller
             ], 422);
         }
 
+        $credentials = $request->only('name', 'password');
+
         try {
-            if (!$token = JWTAuth::attempt($request->only('name', 'password'))) {
+            $validate = Merchant::where('name', $credentials['name'])->firstOrFail();
+
+            if (!$validate) {
                 return response()->json([
-                    'message' => 'Invalid Credentials',
-                    'status' => 401,
-                ], 401);
+                    'message' => 'Merchant Not Found',
+                    'status' => 404,
+                ], 404);
+            } else {
+                $pass = Hash::check($credentials['password'], $validate->password);
+
+                if (!$pass) {
+                    return response()->json([
+                        'message' => 'Invalid Password',
+                        'status' => 401,
+                    ], 401);
+                }
             }
+
+            $customClaims = [
+                'exp' => now()->addDays(3)->timestamp,
+            ];
+
+            $validate['role'] = 'merchant';
+
+            $token = JWTAuth::claims($customClaims)->fromUser($validate);
+
+            return response()->json([
+                'message' => 'Merchant successfully logged in',
+                'status' => 200,
+                'token' => $token,
+                'token_type' => 'bearer',
+                'merchant' => $validate
+            ], 200);
+
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'error' . $e,
                 'status' => 500,
             ], 500);
         }
-
-        return response()->json([
-            'message' => 'Merchant successfully logged in',
-            'status' => 200,
-            'token' => $token,
-        ], 200);
     }
 }

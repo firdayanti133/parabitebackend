@@ -86,6 +86,8 @@ class AuthController extends Controller
                 'exp' => now()->addDays(3)->timestamp,
             ];
 
+            $validate['role'] = 'user';
+
             $token = JWTAuth::claims($customClaims)->fromUser($validate);
 
             return response()->json([

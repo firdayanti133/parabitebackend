@@ -4,8 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Tymon\JWTAuth\Contracts\JWTSubject; 
 
-class Merchant extends Model
+class Merchant extends Model implements JWTSubject
 {
     use HasFactory;
 
@@ -14,7 +15,6 @@ class Merchant extends Model
     protected $primaryKey = 'id';   
 
     protected $fillable = [
-        'owner_id',
         'name',
         'password',
         'logo',
@@ -29,4 +29,14 @@ class Merchant extends Model
     protected $casts = [
         'password' => 'hashed',
     ];
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
 }
