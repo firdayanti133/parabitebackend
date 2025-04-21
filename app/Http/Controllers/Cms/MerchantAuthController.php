@@ -73,38 +73,43 @@ class MerchantAuthController extends Controller
         $credentials = $request->only('name', 'password');
 
         try {
-            $validate = Merchant::where('name', $credentials['name'])->firstOrFail();
+            $credentials = $request->only('name', 'password');
 
-            if (!$validate) {
+            // Find the merchant by name
+            $merchant = Merchant::where('name', $credentials['name'])->first();
+        
+            if (!$merchant) {
                 return response()->json([
                     'message' => 'Merchant Not Found',
                     'status' => 404,
                 ], 404);
-            } else {
-                $pass = Hash::check($credentials['password'], $validate->password);
-
-                if (!$pass) {
-                    return response()->json([
-                        'message' => 'Invalid Password',
-                        'status' => 401,
-                    ], 401);
-                }
             }
-
+        
+            // Validate the password
+            if (!Hash::check($credentials['password'], $merchant->password)) {
+                return response()->json([
+                    'message' => 'Invalid Password',
+                    'status' => 401,
+                ], 401);
+            }
+        
+            // Assign the role explicitly
+            $merchant->role = 'merchant'; // Ensure the role is set
+        
+            // Define custom claims for the JWT token
             $customClaims = [
-                'exp' => now()->addDays(3)->timestamp,
+                'exp' => now()->addDays(3)->timestamp, // Token expiration time
+                'role' => $merchant->role, // Include the role in the token
             ];
 
-            $validate['role'] = 'merchant';
-
-            $token = JWTAuth::claims($customClaims)->fromUser($validate);
+            $token = JWTAuth::claims($customClaims)->fromUser($merchant);
 
             return response()->json([
                 'message' => 'Merchant successfully logged in',
                 'status' => 200,
                 'token' => $token,
                 'token_type' => 'bearer',
-                'merchant' => $validate
+                'merchant' => $merchant
             ], 200);
 
         } catch (Exception $e) {

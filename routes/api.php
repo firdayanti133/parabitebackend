@@ -24,52 +24,51 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
-Route::middleware(['jwt.auth'])->group(function () {
-
-});
-
-Route::prefix('public')->group(function () {
-    Route::get('/menu', [PublicMenuController::class, 'getAllMenus']);
-    Route::get('/menu/{merchant_id}', [PublicMenuController::class, 'getMenusByMerchant']);
-    Route::get('/location', [PublicLocationController::class, 'getLocations']);
+Route::middleware('check.role:user')->group(function () {
+    Route::prefix('public')->group(function () {
+        Route::get('/menu', [PublicMenuController::class, 'getAllMenus']);
+        Route::get('/menu/{merchant_id}', [PublicMenuController::class, 'getMenusByMerchant']);
+        Route::get('/location', [PublicLocationController::class, 'getLocations']);
+    });
+    
+    Route::prefix('order')->group(function () {
+        Route::post('/', [PublicOrderController::class, 'createOrder']);
+        Route::get('/', [PublicOrderController::class, 'allOrders']);
+        Route::get('/{id}', [PublicOrderController::class, 'getOrder']);
+        Route::put('/{id}', [PublicOrderController::class, 'updateStatus']);
+        Route::delete('/{id}', [PublicOrderController::class, 'deleteOrder']);
+    });
 });
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login/merchant', [MerchantAuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
-Route::prefix('cms')->group(function () {
-    Route::prefix('merchant')->group(function () {
-        Route::get('/', [MerchantController::class, 'getAllMerchants']);
-        Route::post('/', [MerchantController::class, 'createMerchant']);
-        Route::put('/{id}', [MerchantController::class, 'updateMerchant']);
-        Route::delete('/{id}', [MerchantController::class, 'deleteMerchant']);
-
-        Route::prefix('menu')->group(function () {
-            Route::get('/{merchant_id}', [MerchantMenuController::class, 'getAllMenus']);
-            Route::post('/{merchant_id}', [MerchantMenuController::class, 'createMenu']);
-            Route::put('/{merchant_id}/{id}', [MerchantMenuController::class, 'updateMenu']);
-            Route::delete('/{merchant_id}/{id}', [MerchantMenuController::class, 'deleteMenu']);
-        }); 
-
-        Route::prefix('order')->group(function () {
-            Route::get('/{merchant_id}', [OrderController::class, 'getMerchantOrders']);
-            Route::put('/{id}', [OrderController::class, 'updateMerchantOrders']);
-            Route::delete('/{id}', [OrderController::class, 'deleteOrder']);
+Route::middleware('check.role:merchant')->group(function () {
+    Route::prefix('cms')->group(function () {
+        Route::prefix('merchant')->group(function () {
+            Route::get('/', [MerchantController::class, 'getAllMerchants']);
+            Route::post('/', [MerchantController::class, 'createMerchant']);
+            Route::put('/{id}', [MerchantController::class, 'updateMerchant']);
+            Route::delete('/{id}', [MerchantController::class, 'deleteMerchant']);
+    
+            Route::prefix('menu')->group(function () {
+                Route::get('/{merchant_id}', [MerchantMenuController::class, 'getAllMenus']);
+                Route::post('/{merchant_id}', [MerchantMenuController::class, 'createMenu']);
+                Route::put('/{merchant_id}/{id}', [MerchantMenuController::class, 'updateMenu']);
+                Route::delete('/{merchant_id}/{id}', [MerchantMenuController::class, 'deleteMenu']);
+            }); 
+    
+            Route::prefix('order')->group(function () {
+                Route::get('/{merchant_id}', [OrderController::class, 'getMerchantOrders']);
+                Route::put('/{id}', [OrderController::class, 'updateMerchantOrders']);
+                Route::delete('/{id}', [OrderController::class, 'deleteOrder']);
+            });
+        });
+    
+        Route::prefix('food')->group(function () {
+            Route::get('/', [FoodController::class, 'getAllFoods']);
+            Route::post('/', [FoodController::class, 'createFood']);
         });
     });
-
-    Route::prefix('food')->group(function () {
-        Route::get('/', [FoodController::class, 'getAllFoods']);
-        Route::post('/', [FoodController::class, 'createFood']);
-    });
 });
-Route::post('/order', [PublicOrderController::class, 'createOrder']);
-Route::get('/order', [PublicOrderController::class, 'allOrders']);
-Route::get('/order/{id}', [PublicOrderController::class, 'getOrder']);
-Route::put('/order/{id}', [PublicOrderController::class, 'updateStatus']);
-Route::delete('/order/{id}', [PublicOrderController::class, 'deleteOrder']);
