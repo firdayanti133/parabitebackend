@@ -22,7 +22,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255|unique:users,email',
             'phone_number' => 'required|string|max:255',
             'password' => 'required|string|min:8',
             'confirmed_password' => 'required|string|min:8|same:password',
@@ -65,7 +65,7 @@ class AuthController extends Controller
     public function merchantRegister(Request $request) {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255|unique:users,email',
             'phone_number' => 'required|string|max:255',
             'password' => 'required|string|min:8',
             'confirmed_password' => 'required|string|min:8|same:password',
