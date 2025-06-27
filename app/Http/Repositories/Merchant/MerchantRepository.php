@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 
 class MerchantRepository {
     public static function createMerchant($data) {
-        DB::table('merchants')
+        DB::table('users')
         ->insert([
             'name' => $data['name'],
             'email' => $data['email'],
