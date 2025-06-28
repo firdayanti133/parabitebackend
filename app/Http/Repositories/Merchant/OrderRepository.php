@@ -6,7 +6,27 @@ use Illuminate\Support\Facades\DB;
 
 class OrderRepository {
     public static function getListOrder($merchant_id, $page, $limit, $status) {
-        $query = DB::table('user_orders')
+        if ($status == null) {
+            $query = DB::table('user_orders')
+            ->leftJoin('users', 'users.id', '=', 'user_orders.user_id')
+            ->leftJoin('locations', 'locations.id', '=', 'user_orders.location_id')
+            ->where('user_orders.merchant_id', $merchant_id)
+            ->select([
+                'user_orders.id',
+                'users.name as user_name',
+                'locations.name as location_name',
+                'user_orders.bill',
+                'user_orders.type',
+                'user_orders.payment_method',
+                'user_orders.status',
+                'user_orders.schedule',
+                'user_orders.is_preorder',
+            ])
+            ->offset(($page - 1) * $limit)
+            ->limit($limit)
+            ->get();
+        } else {
+            $query = DB::table('user_orders')
             ->leftJoin('users', 'users.id', '=', 'user_orders.user_id')
             ->leftJoin('locations', 'locations.id', '=', 'user_orders.location_id')
             ->where('user_orders.merchant_id', $merchant_id)
@@ -25,6 +45,7 @@ class OrderRepository {
             ->offset(($page - 1) * $limit)
             ->limit($limit)
             ->get();
+        }
         
         $data = $query->map(function ($item) {
             $userOrderList = DB::table('user_order_list as uol')

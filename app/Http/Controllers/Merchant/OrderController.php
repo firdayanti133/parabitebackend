@@ -41,7 +41,7 @@ class OrderController extends Controller
 
         $page = $request->page ?? 1;
         $limit = $request->limit ?? 10;
-        $status = $request->status ?? '1';
+        $status = $request->status ?? null;
 
         if ($page < 1 || $limit < 1) {
             return response()->json([
