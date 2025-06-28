@@ -80,7 +80,8 @@ Route::prefix('v1')->group(function () {
                 Route::get('/list', [MerchantOrderController::class, 'getListOrder']);
                 Route::get('/detail/{order_id}', [MerchantOrderController::class, 'getOrderDetail']);
 
-                Route::put('/{order_id}', [MerchantOrderController::class, 'updateOrderStatus']);
+                Route::put('/status/{order_id}', [MerchantOrderController::class, 'updateOrderStatus']);
+                Route::put('/payment/{order_id}', [MerchantOrderController::class, 'updateOrderPaymentStatus']);
             });
 
             Route::prefix('report')->group(function () {

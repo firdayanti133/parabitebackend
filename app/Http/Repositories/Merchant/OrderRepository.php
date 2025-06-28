@@ -140,4 +140,10 @@ class OrderRepository {
 
         return true;
     }
+
+    public static function updateOrderPaymentStatus($order_id) {
+        DB::table('user_orders')
+            ->where('id', $order_id)
+            ->update(['is_paid' => true]);
+    }
 }

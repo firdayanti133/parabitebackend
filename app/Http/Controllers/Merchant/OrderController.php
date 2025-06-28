@@ -151,4 +151,34 @@ class OrderController extends Controller
             ], 500);
         }
     }
+
+    public function updateOrderPaymentStatus($order_id) {
+        $validator = Validator::make(['order_id' => $order_id], [
+            'order_id' => 'exists:user_orders,id',
+        ]);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation Error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            OrderRepository::updateOrderPaymentStatus($order_id);
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Success',
+                'data' => null
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'message' => 'Internal Server Error',
+                'errors' => $e
+            ], 500);
+        }
+    }
 }
