@@ -40,8 +40,8 @@ class DashboardController extends Controller
             ], 422);
         }
 
-        $page = $request->page ?? 1;
-        $limit = $request->limit ?? 10;
+        $page = intval($request->page) ?? 1;
+        $limit = intval($request->limit) ?? 10;
         $type = $request->type ?? null;
 
         if ($page < 1 || $limit < 1) {
