@@ -72,7 +72,7 @@ class DashboardController extends Controller
                 'message' => 'Success',
                 'data' => [
                     'total_data' => $totalData,
-                    'page' => intval($page),
+                    'page' => $page,
                     'limit' => $limit,
                     'total_page' => $totalPage,
                     'data' => $data
