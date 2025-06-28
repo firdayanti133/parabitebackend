@@ -194,4 +194,49 @@ class MenuController extends Controller
             ], 500);
         }
     }
+
+    public function deleteMenu (Request $request, $menu_id) {
+        $merchant = $request->get('auth_user');
+
+        $validateId = Validator::make(['merchant_id' => $merchant->id], [
+            'merchant_id' => 'exists:users,id',
+        ]);
+        
+        if ($validateId->fails()) {
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation Error',
+                'errors' => $validateId->errors()
+            ], 422);
+        }
+
+        $validateId = Validator::make(['menu_id' => $menu_id], [
+            'menu_id' => 'exists:merchant_menu_list,id',
+        ]);
+
+        if ($validateId->fails()) {
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation Error',
+                'errors' => $validateId->errors()
+            ], 422);
+        }
+
+        try {
+            MenuRepository::deleteMenu($menu_id);
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Success',
+                'data' => null
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'message' => 'Internal Server Error',
+                'errors' => $e
+            ], 500);
+        }
+    }
 }
