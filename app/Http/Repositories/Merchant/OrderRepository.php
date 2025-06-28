@@ -71,6 +71,7 @@ class OrderRepository {
                 'bill' => $item->bill,
                 'type' => $item->type,
                 'payment_method' => $item->payment_method,
+                'is_paid' => $item->is_paid,
                 'status' => $item->status,
                 'schedule' => $item->schedule,
                 'is_preorder' => $item->is_preorder,
