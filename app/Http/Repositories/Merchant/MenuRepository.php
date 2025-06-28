@@ -13,6 +13,7 @@ class MenuRepository {
                     'id',
                     'name',
                     'type',
+                    'price',
                     'description',
                     'image',
                     'is_favorite',
