@@ -21,6 +21,7 @@ class OrderRepository {
                 'user_orders.status',
                 'user_orders.schedule',
                 'user_orders.is_preorder',
+                'user_orders.is_paid',
             ])
             ->offset(($page - 1) * $limit)
             ->limit($limit)
@@ -41,6 +42,7 @@ class OrderRepository {
                 'user_orders.status',
                 'user_orders.schedule',
                 'user_orders.is_preorder',
+                'user_orders.is_paid',
             ])
             ->offset(($page - 1) * $limit)
             ->limit($limit)
