@@ -80,10 +80,16 @@ class OrderRepository {
     }
 
     public static function countListOrder($merchant_id, $status) {
-        return DB::table('user_orders')
+        if ($status == null) {
+            return DB::table('user_orders')
+            ->where('merchant_id', $merchant_id)
+            ->count();
+        } else {
+            return DB::table('user_orders')
             ->where('merchant_id', $merchant_id)
             ->where('status', $status)
             ->count();
+        }
     }
 
     public static function getOrderDetail($order_id) {
