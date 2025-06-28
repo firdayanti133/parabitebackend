@@ -27,15 +27,17 @@ class OrderRepository {
             ->get();
         
         $data = $query->map(function ($item) {
-            $userOrderList = DB::table('user_order_list')
+            $userOrderList = DB::table('user_order_list as uol')
+                ->leftJoin('merchant_menu_list as mml', 'mml.id', '=', 'uol.menu_id')
                 ->where('order_id', $item->id)
                 ->select(
-                    'id',
-                    'order_id',
-                    'menu_id',
-                    'price',
-                    'quantity',
-                    'notes',
+                    'uol.id',
+                    'uol.order_id',
+                    'uol.menu_id',
+                    'mml.name as menu_name',
+                    'uol.price',
+                    'uol.quantity',
+                    'uol.notes',
                 )
                 ->get();
 
