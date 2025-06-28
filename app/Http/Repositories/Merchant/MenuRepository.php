@@ -30,6 +30,7 @@ class MenuRepository {
                     'type',
                     'description',
                     'image',
+                    'price',
                     'is_favorite',
                 ])
                 ->offset(($page - 1) * $limit)
