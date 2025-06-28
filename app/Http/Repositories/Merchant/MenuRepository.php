@@ -113,7 +113,7 @@ class MenuRepository {
     public static function getFavoriteMenu($merchant_id) {
         $query = DB::table('merchant_menu_list')
             ->where('merchant_id', $merchant_id)
-            ->where('is_favorite', 1)
+            ->where('is_favorite', "1")
             ->select([
                 'id',
                 'image',
