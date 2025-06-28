@@ -52,6 +52,7 @@ class MenuRepository {
                 'type' => $item->type,
                 'description' => $item->description,
                 'image' => $item->image,
+                'price' => $item->price,
                 'is_favorite' => $item->is_favorite,
                 'rating' => $rating,
             ];
