@@ -46,7 +46,7 @@ class MenuController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'required|string|max:255',
             'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-            'type' => 'required|string|max:255',
+            'type' => 'required|string|max:255|in:1,2,3',
             'nutrition_facts' => 'required|string|max:255',
             'price' => 'required|string|max:255',
         ]);

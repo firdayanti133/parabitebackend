@@ -14,7 +14,7 @@ class DashboardController extends Controller
         $validator = Validator::make($request->all(), [
             'page' => 'numeric',
             'limit' => 'numeric',
-            'type' => 'string|in:1,2',
+            'type' => 'string|in:1,2,3',
             'search' => 'string',
         ]);
 
