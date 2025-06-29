@@ -13,6 +13,15 @@ class MenuRepository {
         return $query->price;
     }
 
+    public static function getMenuMerchant($menu_id) {
+        $query = DB::table('merchant_menu_list')
+        ->where('id', $menu_id)
+        ->select('merchant_id')
+        ->first();
+
+        return $query->merchant_id;
+    } 
+
     public static function getListMenu($page, $limit, $search, $type) {
         if ($type == null) {
              $query = DB::table('merchant_menu_list as mml')
