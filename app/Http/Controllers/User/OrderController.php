@@ -166,7 +166,7 @@ class OrderController extends Controller
 
     public function updateTempOrder(Request $request, $tempOrderId) {
         $validateId = Validator::make(['temp_order_id' => $tempOrderId], [
-            'temp_order_id' => 'exists:temp_user_orders,id',
+            'temp_order_id' => 'exists:temp_user_order,id',
         ]);
 
         if ($validateId->fails()) {
@@ -192,7 +192,7 @@ class OrderController extends Controller
 
         try {
             $menuData = MenuRepository::getMenuDetail($request->menu_id);
-            $totalPrice = $menuData['price'] * $request->quantity; 
+            $totalPrice = $menuData['menu_price'] * $request->quantity; 
 
             $data = [
                 'menu_id' => $request->menu_id,
