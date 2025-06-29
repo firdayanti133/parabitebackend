@@ -151,6 +151,7 @@ class MenuRepository {
             'price',
             'status',
             'is_favorite',
+            'nutrition_facts',
         ])
         ->first();
 
@@ -170,6 +171,7 @@ class MenuRepository {
             'price' => $query->price,
             'status' => $query->status,
             'is_favorite' => $query->is_favorite,
+            'nutrition_facts' => $query->nutrition_facts,
             'rating' => $rating,
         ];
     }
