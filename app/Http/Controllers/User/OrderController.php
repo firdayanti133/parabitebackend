@@ -136,7 +136,7 @@ class OrderController extends Controller
             $data = [
                 'user_id' => $user->id,
                 'merchant_id' => $request->merchant_id,
-                'location_id' => $request->location_id ?? null,
+                'location_id' => $request->location_id ?: null,
                 'bill' => $totalPrice,
                 'type' => $request->type,
                 'payment_method' => $request->payment_method,
