@@ -17,7 +17,7 @@ class MenuRepository {
         if ($type == null) {
              $query = DB::table('merchant_menu_list as mml')
             ->leftJoin('users', 'users.id', '=', 'mml.merchant_id')
-            ->where('name', 'like', '%' . $search . '%')
+            ->where('mml.name', 'like', '%' . $search . '%')
             ->select([
                 'mml.id as menu_id',
                 'users.name as merchant_name',
