@@ -110,7 +110,7 @@ class OrderController extends Controller
 
         $validator = Validator::make($request->all(), [
             'merchant_id' => 'required|numeric|exists:users,id',
-            'location_id' => 'required|numeric|exists:locations,id',
+            'location_id' => 'required_if:type,1|numeric|exists:locations,id',
             'type' => 'required|numeric|in:1,2,3',
             'payment_method' => 'required|numeric|in:1,2',
             'is_preorder' => 'required|boolean',
