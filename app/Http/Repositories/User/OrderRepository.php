@@ -5,6 +5,13 @@ namespace App\Http\Repositories\User;
 use Illuminate\Support\Facades\DB;
 
 class OrderRepository {
+    public static function getTempOrderDetail($temp_order_id) {
+        $query = DB::table('temp_user_order')
+        ->where($temp_order_id)
+        ->first();
+
+        return $query;
+    }
     public static function getListTempOrder($user_id) {
         $query = DB::table('temp_user_order as tuo')
         ->leftJoin('users', 'users.id', '=', 'tuo.merchant_id')

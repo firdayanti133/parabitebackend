@@ -191,8 +191,9 @@ class OrderController extends Controller
         }
 
         try {
-            $menuData = MenuRepository::getMenuDetail($request->menu_id);
-            $totalPrice = $menuData['menu_price'] * $request->quantity; 
+            $tempOrderDetail = OrderRepository::getTempOrderDetail($tempOrderId);
+            $menuData = MenuRepository::getMenuDetail($tempOrderDetail->menu_id);
+            $totalPrice = $menuData['menu_price'] * $request->quantity;
 
             $data = [
                 'menu_id' => $request->menu_id,
