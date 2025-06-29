@@ -198,7 +198,7 @@ class OrderController extends Controller
                 'menu_id' => $request->menu_id,
                 'price' => $totalPrice,
                 'quantity' => $request->quantity,
-                'notes' => $request->notes,
+                'notes' => $request->notes ?? null,
             ];
 
             OrderRepository::updateTempOrder($data);

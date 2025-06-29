@@ -73,14 +73,24 @@ class OrderRepository {
     }
 
     public static function updateTempOrder($data) {
-        DB::table('temp_user_order')
-        ->where('id', $data['id'])
-        ->update([
-            'price' => $data['price'],
-            'quantity' => $data['quantity'],
-            'notes' => $data['notes'],
-            'updated_at' => now(),
-        ]);
+        if ($data['notes'] == null) {
+            DB::table('temp_user_order')
+            ->where('id', $data['id'])
+            ->update([
+                'price' => $data['price'],
+                'quantity' => $data['quantity'],
+                'updated_at' => now(),
+            ]);
+        } else {
+            DB::table('temp_user_order')
+            ->where('id', $data['id'])
+            ->update([
+                'price' => $data['price'],
+                'quantity' => $data['quantity'],
+                'notes' => $data['notes'],
+                'updated_at' => now(),
+            ]);
+        }
 
         return true;
     }
