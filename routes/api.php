@@ -12,6 +12,7 @@ use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\OrderController as UserOrderController;
 use App\Http\Controllers\User\HistoryController as UserHistoryController;
 use App\Http\Controllers\User\ProfileController as UserProfileController;
+use App\Http\Controllers\User\LocationController as UserLocationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,6 +59,8 @@ Route::prefix('v1')->group(function () {
                Route::get('/', [UserDashboardController::class, 'getUserFavoriteList']);
                Route::put('/{menu_id}', [UserDashboardController::class, 'userFavoriteHandler']);
             });
+
+            Route::get('/locations', [UserLocationController::class, 'getListLocations']);
         });
     });
 
