@@ -13,48 +13,79 @@ class MenuRepository {
         return $query->price;
     }
 
-    public static function getListMenu($page, $limit, $search) {
-        $query = DB::table('merchant_menu_list')
-        ->where('name', 'like', '%' . $search . '%')
-        ->select([
-            'id',
-            'name',
-            'description',
-            'image',
-            'type',
-            'price',
-            'status',
-            'is_favorite',
-        ])
-        ->offset(($page - 1) * $limit)
-        ->limit($limit)
-        ->get();
+    public static function getListMenu($page, $limit, $search, $type) {
+        if ($type == null) {
+             $query = DB::table('merchant_menu_list as mml')
+            ->leftJoin('users', 'users.id', '=', 'mml.merchant_id')
+            ->where('name', 'like', '%' . $search . '%')
+            ->select([
+                'mml.id as menu_id',
+                'users.name as merchant_name',
+                'mml.name as menu_name',
+                'mml.description as menu_description',
+                'mml.image as menu_image',
+                'mml.type as menu_type',
+                'mml.price as menu_price',
+                'mml.status as menu_status',
+                'mml.is_favorite as menu_is_favorite',
+            ])
+            ->offset(($page - 1) * $limit)
+            ->limit($limit)
+            ->get();
+        } else {
+            $query = DB::table('merchant_menu_list as mml')
+            ->leftJoin('users', 'users.id', '=', 'mml.merchant_id')
+            ->where('type', $type)
+            ->where('name', 'like', '%' . $search . '%')
+            ->select([
+                'mml.id as menu_id',
+                'users.name as merchant_name',
+                'mml.name as menu_name',
+                'mml.description as menu_description',
+                'mml.image as menu_image',
+                'mml.type as menu_type',
+                'mml.price as menu_price',
+                'mml.status as menu_status',
+                'mml.is_favorite as menu_is_favorite',
+            ])
+            ->offset(($page - 1) * $limit)
+            ->limit($limit)
+            ->get();
+        }
 
         $data = $query->map(function ($item) {
             $getRating = DB::table('menu_ratings')
-                ->where('menu_id', $item->id)
+                ->where('menu_id', $item->menu_id)
                 ->avg('rating');
 
             $rating = $getRating ?: 0;
 
             return [
-                'id' => $item->id,
-                'name' => $item->name,
-                'description' => $item->description,
-                'image' => $item->image,
-                'type' => $item->type,
-                'price' => $item->price,
-                'status' => $item->status,
-                'is_favorite' => $item->is_favorite,
-                'rating' => $rating,
+                'menu_id' => $item->menu_id,
+                'merchant_name' => $item->merchant_name,
+                'menu_name' => $item->menu_name,
+                'menu_description' => $item->menu_description,
+                'menu_image' => $item->menu_image,
+                'menu_type' => $item->menu_type,
+                'menu_price' => $item->menu_price,
+                'menu_status' => $item->menu_status,
+                'menu_is_favorite' => $item->menu_is_favorite,
+                'menu_rating' => $rating,
             ];
         });
 
         return $data;
     }
 
-    public static function countListMenu($search) {
+    public static function countListMenu($search, $type) {
+        if ($type == null) {
+            return DB::table('merchant_menu_list')
+            ->where('name', 'like', '%' . $search . '%')
+            ->count();
+        } 
+        
         return DB::table('merchant_menu_list')
+        ->where('type', $type)
         ->where('name', 'like', '%' . $search . '%')
         ->count();
     }
