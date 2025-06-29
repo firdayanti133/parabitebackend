@@ -5,6 +5,15 @@ namespace App\Http\Repositories\User;
 use Illuminate\Support\Facades\DB;
 
 class OrderRepository {
+    public static function checkPaymentStatus($order_id) {
+        $query = DB::table('user_orders')
+        ->where('id', $order_id)
+        ->select('is_paid', 1)
+        ->first();
+
+        return $query->is_paid;
+    }
+
     public static function getTempOrderDetail($temp_order_id) {
         $query = DB::table('temp_user_order')
         ->where('temp_user_order.id', $temp_order_id)
@@ -12,6 +21,7 @@ class OrderRepository {
 
         return $query;
     }
+    
     public static function getListTempOrder($user_id) {
         $query = DB::table('temp_user_order as tuo')
         ->leftJoin('users', 'users.id', '=', 'tuo.merchant_id')

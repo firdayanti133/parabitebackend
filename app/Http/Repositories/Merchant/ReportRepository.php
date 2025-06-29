@@ -9,7 +9,7 @@ class ReportRepository {
         $query = DB::table('user_orders')
         ->where('merchant_id', $merchant_id)
         ->where(DB::raw('TO_DAYS(created_at)'), DB::raw('TO_DAYS(NOW())'))
-        ->where('status', '3')
+        ->where('is_paid', 1)
         ->sum('bill');
 
         return intval($query);

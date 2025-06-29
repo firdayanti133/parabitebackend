@@ -11,6 +11,51 @@ use App\Http\Repositories\User\OrderRepository;
 
 class OrderController extends Controller
 {
+    public function checkPaymentStatus(Request $request, $order_id) {
+        $user = $request->get('auth_user');
+
+        $validateId = Validator::make(['user_id' => $user->id], [
+            'user_id' => 'exists:users,id',
+        ]);
+
+        if ($validateId->fails()) {
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation Error',
+                'errors' => $validateId->errors()
+            ], 422);
+        }
+
+        $validateId = Validator::make(['order_id' => $order_id], [
+            'order_id' => 'exists:user_orders,id',
+        ]);
+
+        if ($validateId->fails()) {
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation Error',
+                'errors' => $validateId->errors()
+            ], 422);
+        }
+
+        try {
+            $data = OrderRepository::checkPaymentStatus($order_id);
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Success',
+                'data' => $data
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'message' => 'Internal Server Error',
+                'errors' => $e
+            ], 500);
+        }
+    }
+
     public function getListTempOrder(Request $request) {
         $user = $request->get('auth_user');
 
