@@ -141,7 +141,7 @@ class MenuRepository {
     public static function getMenuDetail($menu_id) {
         $query = DB::table('merchant_menu_list as mml')
         ->leftJoin('users', 'users.id', '=', 'mml.merchant_id')
-        ->where('id', $menu_id)
+        ->where('mml.id', $menu_id)
         ->select([
             'mml.id as menu_id',
             'mml.merchant_id as merchant_id',
