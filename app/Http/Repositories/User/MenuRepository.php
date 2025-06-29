@@ -149,7 +149,7 @@ class MenuRepository {
             'mml.name as menu_name',
             'mml.description as menu_description',
             'mml.image as menu_image',
-            'mml.ype as menu_type',
+            'mml.type as menu_type',
             'mml.price as menu_price',
             'mml.status as menu_status',
             'mml.is_favorite as menu_is_favorite',
