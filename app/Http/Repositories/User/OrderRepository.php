@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 class OrderRepository {
     public static function getTempOrderDetail($temp_order_id) {
         $query = DB::table('temp_user_order')
-        ->where($temp_order_id)
+        ->where('temp_user_order.id', $temp_order_id)
         ->first();
 
         return $query;
