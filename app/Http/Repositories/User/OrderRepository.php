@@ -75,7 +75,7 @@ class OrderRepository {
     public static function updateTempOrder($data) {
         if ($data['notes'] == null) {
             DB::table('temp_user_order')
-            ->where('id', $data['id'])
+            ->where('id', $data['menu_id'])
             ->update([
                 'price' => $data['price'],
                 'quantity' => $data['quantity'],
@@ -83,7 +83,7 @@ class OrderRepository {
             ]);
         } else {
             DB::table('temp_user_order')
-            ->where('id', $data['id'])
+            ->where('id', $data['menu_id'])
             ->update([
                 'price' => $data['price'],
                 'quantity' => $data['quantity'],
