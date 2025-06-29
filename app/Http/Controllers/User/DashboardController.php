@@ -14,6 +14,7 @@ class DashboardController extends Controller
         $validator = Validator::make($request->all(), [
             'page' => 'numeric',
             'limit' => 'numeric',
+            'type' => 'string|in:1,2',
             'search' => 'string',
         ]);
 
@@ -28,6 +29,7 @@ class DashboardController extends Controller
         $page = $request->page ?? 1;
         $limit = $request->limit ?? 10;
         $search = $request->search ?? '';
+        $type = $request->type ?? null;
 
         if ($page < 1 || $limit < 1) {
             return response()->json([
@@ -38,9 +40,9 @@ class DashboardController extends Controller
         }
 
         try {
-            $data = MenuRepository::getListMenu($page, $limit, $search);
+            $data = MenuRepository::getListMenu($page, $limit, $search, $type);
 
-            $totalData = MenuRepository::countListMenu($search);
+            $totalData = MenuRepository::countListMenu($search, $type);
             $totalPage = ceil($totalData / $limit);
 
             return response()->json([
