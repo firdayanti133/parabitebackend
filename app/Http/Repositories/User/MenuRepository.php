@@ -139,19 +139,21 @@ class MenuRepository {
     }
 
     public static function getMenuDetail($menu_id) {
-        $query = DB::table('merchant_menu_list')
+        $query = DB::table('merchant_menu_list as mml')
+        ->leftJoin('users', 'users.id', '=', 'mml.merchant_id')
         ->where('id', $menu_id)
         ->select([
-            'id',
-            'merchant_id',
-            'name',
-            'description',
-            'image',
-            'type',
-            'price',
-            'status',
-            'is_favorite',
-            'nutrition_facts',
+            'mml.id as menu_id',
+            'mml.merchant_id as merchant_id',
+            'users.name as merchant_name',
+            'mml.name as menu_name',
+            'mml.description as menu_description',
+            'mml.image as menu_image',
+            'mml.ype as menu_type',
+            'mml.price as menu_price',
+            'mml.status as menu_status',
+            'mml.is_favorite as menu_is_favorite',
+            'mml.nutrition_facts as menu_nutrition_facts',
         ])
         ->first();
 
@@ -162,17 +164,18 @@ class MenuRepository {
         $rating = $getRating ?: 0;
 
         return [
-            'id' => $query->id,
+            'menu_id' => $query->menu_id,
             'merchant_id' => $query->merchant_id,
-            'name' => $query->name,
-            'description' => $query->description,
-            'image' => $query->image,
-            'type' => $query->type,
-            'price' => $query->price,
-            'status' => $query->status,
-            'is_favorite' => $query->is_favorite,
-            'nutrition_facts' => $query->nutrition_facts,
-            'rating' => $rating,
+            'merchant_name' => $query->merchant_name,
+            'menu_name' => $query->menu_name,
+            'menu_description' => $query->menu_description,
+            'menu_image' => $query->menu_image,
+            'menu_type' => $query->menu_type,
+            'menu_price' => $query->menu_price,
+            'menu_status' => $query->menu_status,
+            'menu_is_favorite' => $query->menu_is_favorite,
+            'menu_nutrition_facts' => $query->menu_nutrition_facts,
+            'menu_rating' => $rating,
         ];
     }
 
