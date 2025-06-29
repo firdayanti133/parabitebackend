@@ -14,6 +14,7 @@ class OrderRepository {
             'tuo.id',
             'users.name as merchant_name',
             'mml.name as menu_name',
+            'mml.image as menu_image',
             'tuo.price',
             'tuo.quantity',
             'tuo.notes',

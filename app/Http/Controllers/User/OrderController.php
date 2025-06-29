@@ -220,7 +220,7 @@ class OrderController extends Controller
 
     public function removeTempOrder($tempOrderId) {
         $validator = Validator::make(['temp_order_id' => $tempOrderId], [
-            'temp_order_id' => 'exists:temp_user_orders,id',
+            'temp_order_id' => 'exists:temp_user_order,id',
         ]);
         
         if ($validator->fails()) {
