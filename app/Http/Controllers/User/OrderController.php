@@ -196,7 +196,7 @@ class OrderController extends Controller
             $totalPrice = $menuData['menu_price'] * $request->quantity;
 
             $data = [
-                'menu_id' => $request->menu_id,
+                'temp_order_id' => $tempOrderId,
                 'price' => $totalPrice,
                 'quantity' => $request->quantity,
                 'notes' => $request->notes ?? null,
