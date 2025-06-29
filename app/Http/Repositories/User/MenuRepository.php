@@ -35,8 +35,8 @@ class MenuRepository {
         } else {
             $query = DB::table('merchant_menu_list as mml')
             ->leftJoin('users', 'users.id', '=', 'mml.merchant_id')
-            ->where('type', $type)
-            ->where('name', 'like', '%' . $search . '%')
+            ->where('mml.type', $type)
+            ->where('mml.name', 'like', '%' . $search . '%')
             ->select([
                 'mml.id as menu_id',
                 'users.name as merchant_name',
@@ -83,7 +83,7 @@ class MenuRepository {
             ->where('name', 'like', '%' . $search . '%')
             ->count();
         } 
-        
+
         return DB::table('merchant_menu_list')
         ->where('type', $type)
         ->where('name', 'like', '%' . $search . '%')
