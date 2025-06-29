@@ -7,12 +7,12 @@ use Illuminate\Support\Facades\DB;
 class OrderRepository {
     public static function getListTempOrder($user_id) {
         $query = DB::table('temp_user_order as tuo')
-        ->leftJoin('users', 'users.id', '=', 'tuo.user_id')
+        ->leftJoin('users', 'users.id', '=', 'tuo.merchant_id')
         ->leftJoin('merchant_menu_list as mml', 'mml.id', '=', 'tuo.menu_id')
         ->where('tuo.user_id', $user_id)
         ->select([
             'tuo.id',
-            'users.name as user_name',
+            'users.name as merchant_name',
             'mml.name as menu_name',
             'tuo.price',
             'tuo.quantity',
