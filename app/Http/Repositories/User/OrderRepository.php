@@ -19,6 +19,7 @@ class OrderRepository {
         ->where('tuo.user_id', $user_id)
         ->select([
             'tuo.id',
+            'tuo.merchant_id',
             'users.name as merchant_name',
             'mml.name as menu_name',
             'mml.image as menu_image',
