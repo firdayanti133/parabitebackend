@@ -64,12 +64,12 @@ class OrderController extends Controller
 
         try {
             $user = $request->get('auth_user');
-            $menuData = MenuRepository::getMenuMerchant($menuId);
-            $totalPrice = $menuData['price'] * $quantity;
+            $menuData = MenuRepository::getMenuDetail($menuId);
+            $totalPrice = $menuData['menu_price'] * $quantity;
 
             $data = [
                 'user_id' => $user->id,
-                'merchant_id' => $menuData,
+                'merchant_id' => $menuData['merchant_id'],
                 'menu_id' => $menuId,
                 'price' => $totalPrice,
                 'quantity' => $quantity,
