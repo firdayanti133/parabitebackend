@@ -43,6 +43,8 @@ Route::prefix('v1')->group(function () {
                     Route::delete('/{temp_order_id}', [UserOrderController::class, 'removeTempOrder']);
                 });
 
+                Route::get('/current', [UserOrderController::class, 'getCurrentOrder']);
+
                 Route::post('/', [UserOrderController::class, 'createOrder']);
             });
 

@@ -5,6 +5,16 @@ namespace App\Http\Repositories\User;
 use Illuminate\Support\Facades\DB;
 
 class OrderRepository {
+    public static function getCurrentOrder($user_id) {
+        $query = DB::table('user_orders')
+        ->where('user_id', $user_id)
+        ->where('status', 'in', [1, 2])
+        ->orderBy('id', 'desc')
+        ->first();
+
+        return $query;
+    }
+    
     public static function checkPaymentStatus($order_id) {
         $query = DB::table('user_orders')
         ->where('id', $order_id)

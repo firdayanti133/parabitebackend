@@ -7,9 +7,42 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 use App\Http\Repositories\User\MenuRepository;
+use App\Http\Repositories\User\OrderRepository;
 
 class DashboardController extends Controller
 {
+    public function getCurrentOrder(Request $request) {
+        $user = $request->get('auth_user');
+
+        $validateId = Validator::make(['user_id' => $user->id], [
+            'user_id' => 'exists:users,id',
+        ]);
+
+        if ($validateId->fails()) {
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation Error',
+                'errors' => $validateId->errors()
+            ], 422);
+        }
+
+        try {
+            $data = OrderRepository::getCurrentOrder($user->id);
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Success',
+                'data' => $data
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'message' => 'Internal Server Error',
+                'errors' => $e
+            ], 500);
+        }
+    }
     public function getListMenu(Request $request) {
         $validator = Validator::make($request->all(), [
             'page' => 'numeric',
