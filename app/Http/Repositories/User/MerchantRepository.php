@@ -15,7 +15,7 @@ class MerchantRepository {
         ])
         ->get();
 
-        return true;
+        return $query;
     }
 
     public static function getMerchantTopMenu() {
