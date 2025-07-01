@@ -35,6 +35,11 @@ Route::prefix('v1')->group(function () {
                 Route::get('/sepuluh-ribu', [UserDashboardController::class, 'getSepuluhRibuMenu']);
             });
 
+            Route::prefix('merchant')->group(function () {
+                Route::get('/', [UserDashboardController::class, 'getMerchantList']);
+                Route::get('/top', [UserDashboardController::class, 'getRecommendedMenu']);
+            });
+
             Route::prefix('order')->group(function () {
                 Route::prefix('temp')->group(function () {
                     Route::get('/', [UserOrderController::class, 'getListTempOrder']);

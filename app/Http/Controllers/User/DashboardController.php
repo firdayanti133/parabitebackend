@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Validator;
 
 use App\Http\Repositories\User\MenuRepository;
 use App\Http\Repositories\User\OrderRepository;
+use App\Http\Repositories\User\MerchantRepository;
 
 class DashboardController extends Controller
 {
@@ -213,6 +214,72 @@ class DashboardController extends Controller
 
         try {
             $data = MenuRepository::getUserFavoriteList($user->id);
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Success',
+                'data' => $data
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'message' => 'Internal Server Error',
+                'errors' => $e
+            ], 500);
+        }
+    }
+
+    public function getMerchantList(Request $request) {
+        $user = $request->get('auth_user');
+
+        $validateId = Validator::make(['user_id' => $user->id], [
+            'user_id' => 'exists:users,id',
+        ]);
+
+        if ($validateId->fails()) {
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation Error',
+                'errors' => $validateId->errors()
+            ], 422);
+        }   
+
+        try {
+            $data = MerchantRepository::getMerchantList();
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Success',
+                'data' => $data
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'message' => 'Internal Server Error',
+                'errors' => $e
+            ], 500);
+        }
+    }
+
+    public function getRecommendedMenu(Request $request) {
+        $user = $request->get('auth_user');
+
+        $validateId = Validator::make(['user_id' => $user->id], [
+            'user_id' => 'exists:users,id',
+        ]);
+
+        if ($validateId->fails()) {
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation Error',
+                'errors' => $validateId->errors()
+            ], 422);
+        }
+
+        try {
+            $data = MerchantRepository::getMerchantTopMenu();
 
             return response()->json([
                 'code' => 200,
