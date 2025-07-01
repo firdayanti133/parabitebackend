@@ -11,7 +11,7 @@ class MerchantRepository {
         ->select([
             'id',
             'name',
-            'image',
+            'photo',
         ])
         ->get();
 
