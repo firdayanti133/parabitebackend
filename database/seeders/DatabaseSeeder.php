@@ -3,10 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Database\Seeders\LocationSeeder;
+// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -22,7 +21,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@user.com',
             'phone_number' => '08123456789',
             'password' => Hash::make('adminuser13'),
-            'role_name' => 'user',
+            'role_name' => User::ROLE_ADMIN,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -32,7 +31,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@merchant.com',
             'phone_number' => '08123456789',
             'password' => Hash::make('adminmerchant13'),
-            'role_name' => 'merchant',
+            'role_name' => User::ROLE_MERCHANT,
             'is_merchant' => '1',
             'created_at' => now(),
             'updated_at' => now(),

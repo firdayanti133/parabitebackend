@@ -1,18 +1,19 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\LocationController as AdminLocationController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AuthController;
-
 use App\Http\Controllers\Merchant\DashboardController as MerchantDashboardController;
 use App\Http\Controllers\Merchant\MenuController as MerchantMenuController;
 use App\Http\Controllers\Merchant\OrderController as MerchantOrderController;
 use App\Http\Controllers\Merchant\ReportController as MerchantReportController;
-
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
-use App\Http\Controllers\User\OrderController as UserOrderController;
 use App\Http\Controllers\User\HistoryController as UserHistoryController;
-use App\Http\Controllers\User\ProfileController as UserProfileController;
 use App\Http\Controllers\User\LocationController as UserLocationController;
+use App\Http\Controllers\User\OrderController as UserOrderController;
+use App\Http\Controllers\User\ProfileController as UserProfileController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,6 +23,28 @@ use App\Http\Controllers\User\LocationController as UserLocationController;
 
 Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
+    Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth');
+
+    Route::prefix('admin')->middleware('auth:admin')->group(function () {
+        Route::get('/dashboard', [AdminDashboardController::class, 'index']);
+
+        Route::prefix('users')->group(function () {
+            Route::get('/', [AdminUserController::class, 'index']);
+            Route::post('/', [AdminUserController::class, 'store']);
+            Route::get('/{user_id}', [AdminUserController::class, 'show']);
+            Route::put('/{user_id}', [AdminUserController::class, 'update']);
+            Route::delete('/{user_id}', [AdminUserController::class, 'destroy']);
+        });
+
+        Route::prefix('locations')->group(function () {
+            Route::get('/', [AdminLocationController::class, 'index']);
+            Route::post('/', [AdminLocationController::class, 'store']);
+            Route::get('/{location_id}', [AdminLocationController::class, 'show']);
+            Route::put('/{location_id}', [AdminLocationController::class, 'update']);
+            Route::delete('/{location_id}', [AdminLocationController::class, 'destroy']);
+        });
+    });
 
     // User-specific routes
     Route::prefix('user')->group(function () {
@@ -54,17 +77,17 @@ Route::prefix('v1')->group(function () {
             });
 
             Route::prefix('history')->group(function () {
-               Route::get('/', [UserHistoryController::class, 'getListPurchaseHistory']); 
-               Route::get('/{order_id}', [UserHistoryController::class, 'getHistoryDetail']);
+                Route::get('/', [UserHistoryController::class, 'getListPurchaseHistory']);
+                Route::get('/{order_id}', [UserHistoryController::class, 'getHistoryDetail']);
             });
 
             Route::prefix('profile')->group(function () {
-               Route::get('/stat', [UserProfileController::class, 'getUserOrderStats']); 
+                Route::get('/stat', [UserProfileController::class, 'getUserOrderStats']);
             });
 
             Route::prefix('favorite')->group(function () {
-               Route::get('/', [UserDashboardController::class, 'getUserFavoriteList']);
-               Route::put('/{menu_id}', [UserDashboardController::class, 'userFavoriteHandler']);
+                Route::get('/', [UserDashboardController::class, 'getUserFavoriteList']);
+                Route::put('/{menu_id}', [UserDashboardController::class, 'userFavoriteHandler']);
             });
 
             Route::get('/locations', [UserLocationController::class, 'getListLocations']);
@@ -95,9 +118,9 @@ Route::prefix('v1')->group(function () {
             });
 
             Route::prefix('report')->group(function () {
-               Route::get('/', [MerchantDashboardController::class, 'checkDailyIncome']);
-               Route::get('/daily', [MerchantReportController::class, 'getListDailyIncome']); 
-               Route::get('/weekly', [MerchantReportController::class, 'getWeeklyReport']);
+                Route::get('/', [MerchantDashboardController::class, 'checkDailyIncome']);
+                Route::get('/daily', [MerchantReportController::class, 'getListDailyIncome']);
+                Route::get('/weekly', [MerchantReportController::class, 'getWeeklyReport']);
             });
         });
     });

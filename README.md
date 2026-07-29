@@ -1,61 +1,102 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Parabite Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Parabite Backend is a Laravel 12 JSON API for buyers, merchants, and administrators. Authentication uses JWT bearer tokens, application data is stored in MySQL, and API responses follow the existing `code`, `message`, `data`, and `errors` format.
 
-## About Laravel
+Complete endpoint, request-body, response, authentication, and usage documentation is available in [`docs/API.md`](docs/API.md).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Requirements
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- PHP 8.2 or newer
+- Composer
+- MySQL
+- Node.js and npm for the Laravel welcome-page assets
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Setup
 
-## Learning Laravel
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan jwt:secret
+php artisan migrate --seed
+php artisan serve
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+The database seeder creates an Admin account, a Merchant account, and the initial location list. Change seeded credentials before using the application outside local development.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Roles
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- `admin`: accesses Admin dashboard statistics and manages users and locations.
+- `user`: existing Buyer role and Buyer API flows.
+- `merchant`: existing Merchant/Seller role and Merchant API flows.
 
-## Laravel Sponsors
+All protected endpoints require:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```text
+Authorization: Bearer <jwt-token>
+```
 
-### Premium Partners
+The login response includes `account.dashboard_path`, which allows API clients to route each role to its own dashboard without changing existing authentication behavior.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Token Lifecycle
 
-## Contributing
+Access tokens are valid for three days by default and may be refreshed for fourteen days from their original issue time. These values can be configured with:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```dotenv
+JWT_TTL=4320
+JWT_REFRESH_TTL=20160
+JWT_BLACKLIST_ENABLED=true
+```
 
-## Code of Conduct
+Refresh uses JWT rotation rather than a second stored refresh-token string:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```http
+POST /api/v1/refresh
+Authorization: Bearer <current-or-recently-expired-token>
+```
 
-## Security Vulnerabilities
+The response returns a new bearer token and invalidates the previous token immediately. Replace the locally stored token before making another API request.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Logout invalidates the current token:
 
-## License
+```http
+POST /api/v1/logout
+Authorization: Bearer <current-token>
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+The login and refresh responses include `expired_at` and `refreshable_until` Unix timestamps. Once the refresh window expires, the user must log in again.
+
+## Admin API
+
+All Admin endpoints are under `/api/v1/admin` and require the `admin` role.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/dashboard` | Dashboard statistics and current Admin summary |
+| `GET` | `/users` | Paginated user list with `search` and `role` filters |
+| `POST` | `/users` | Create a user |
+| `GET` | `/users/{user_id}` | View non-sensitive user details |
+| `PUT` | `/users/{user_id}` | Update a user or reset their password |
+| `DELETE` | `/users/{user_id}` | Safely deactivate a user |
+| `GET` | `/locations` | Paginated location list with `search` |
+| `POST` | `/locations` | Create a location |
+| `GET` | `/locations/{location_id}` | View a location |
+| `PUT` | `/locations/{location_id}` | Rename a location |
+| `DELETE` | `/locations/{location_id}` | Delete an unused location |
+
+User deletion is implemented as account deactivation so orders, menus, ratings, favorites, wishlists, and other historical records remain valid. Locations referenced by orders cannot be deleted.
+
+## Validation
+
+```bash
+composer test
+./vendor/bin/pint --test
+npm install
+npm run build
+```
+
+The repository contains feature tests for Admin authorization, user management, and location management under `tests/Feature/Admin`.
+
+## Frontend Scope
+
+This repository contains only the Laravel API and the default Laravel welcome-page assets. It does not contain an existing Buyer, Merchant, or Admin application layout/component system. Admin UI screens should consume the endpoints above from the corresponding frontend repository rather than introducing a second frontend architecture here.

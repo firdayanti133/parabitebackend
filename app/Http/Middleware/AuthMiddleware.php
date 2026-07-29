@@ -4,10 +4,10 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthMiddleware
 {
@@ -17,19 +17,27 @@ class AuthMiddleware
             $token = JWTAuth::parseToken();
             $user = $token->authenticate();
 
-            if (!$user) {
+            if (! $user) {
                 return response()->json([
                     'code' => 401,
                     'message' => 'Unauthorized',
-                    'data' => null
+                    'data' => null,
                 ], 401);
             }
 
-            if (!empty($roles) && !in_array($user->role_name, $roles)) {
+            if (! $user->is_active) {
+                return response()->json([
+                    'code' => 403,
+                    'message' => 'Forbidden: Account is inactive',
+                    'data' => null,
+                ], 403);
+            }
+
+            if (! empty($roles) && ! in_array($user->role_name, $roles, true)) {
                 return response()->json([
                     'code' => 403,
                     'message' => 'Forbidden: Insufficient permissions',
-                    'data' => null
+                    'data' => null,
                 ], 403);
             }
 
@@ -39,19 +47,19 @@ class AuthMiddleware
             return response()->json([
                 'code' => 401,
                 'message' => 'Unauthorized: Token expired',
-                'data' => null
+                'data' => null,
             ], 401);
         } catch (TokenInvalidException $e) {
             return response()->json([
                 'code' => 401,
                 'message' => 'Unauthorized: Invalid token',
-                'data' => null
+                'data' => null,
             ], 401);
         } catch (JWTException $e) {
             return response()->json([
                 'code' => 401,
                 'message' => 'Unauthorized: Token error',
-                'data' => null
+                'data' => null,
             ], 401);
         }
 
