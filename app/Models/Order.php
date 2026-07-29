@@ -9,7 +9,7 @@ class Order extends Model
 {
     use HasFactory;
 
-    protected $table = 'orders';
+    protected $table = 'user_orders';
 
     protected $primaryKey = 'id';
 
@@ -21,6 +21,9 @@ class Order extends Model
         'order_type',
         'payment_method',
         'status',
+        'queue_number',
+        'is_preorder',
+        'preorder_timeset',
         'created_at',
         'updated_at'
     ];

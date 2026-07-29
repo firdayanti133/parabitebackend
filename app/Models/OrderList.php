@@ -9,7 +9,7 @@ class OrderList extends Model
 {
     use HasFactory;
 
-    protected $table = 'order_list';
+    protected $table = 'user_order_list';
 
     protected $primaryKey = 'id';
 

@@ -42,6 +42,7 @@ Route::middleware('check.role:user')->group(function () {
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login/merchant', [MerchantAuthController::class, 'login']);
+Route::post('/login/admin', [App\Http\Controllers\AdminAuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
 Route::middleware('check.role:merchant')->group(function () {

@@ -40,15 +40,23 @@ class OrderController extends Controller
         }
 
         $menu = MerchantMenu::where('id', $request->menu_id)->first();
+        $merchantId = $menu->merchant_id;
+
+        $lastQueue = Order::where('merchant_id', $merchantId)
+            ->whereDate('created_at', today())
+            ->max('queue_number');
+
+        $queueNumber = ($lastQueue ?? 0) + 1;
 
         $order = Order::create([
             'user_id' => $request->user_id, 
-            'merchant_id' => $menu->merchant_id,
+            'merchant_id' => $merchantId,
             'location_id' => $request->location_id,
             'total_price' => $request->total_price,
             'order_type' => $request->order_type,
             'payment_method' => $request->payment_method,
             'status' => 'waiting',
+            'queue_number' => $queueNumber,
             'is_preorder' => $request->is_preorder,
             'preorder_timeset' => $request->preorder_timeset
         ]);

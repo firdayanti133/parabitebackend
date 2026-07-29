@@ -22,7 +22,7 @@ class OrderController extends Controller
 
     public function updateMerchantOrders(Request $request, $id) {
         $validator = Validator::make(['id' => $id], [
-            'id' => 'required|integer|exists:orders,id',
+            'id' => 'required|integer|exists:user_orders,id',
         ]);
 
         if ($validator->fails()) {
