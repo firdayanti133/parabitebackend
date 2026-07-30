@@ -86,6 +86,187 @@ Authentication and authorization failures:
 | `422` | Request validation failed |
 | `500` | Unexpected server error |
 
+### Error response JSON
+
+The examples below are referenced by the endpoint response matrix later in this document.
+
+#### Missing or invalid token — HTTP 401
+
+```json
+{
+  "code": 401,
+  "message": "Unauthorized: Token error",
+  "data": null
+}
+```
+
+An expired token may return:
+
+```json
+{
+  "code": 401,
+  "message": "Unauthorized: Token expired",
+  "data": null
+}
+```
+
+An invalid or blacklisted token may return:
+
+```json
+{
+  "code": 401,
+  "message": "Unauthorized: Invalid token",
+  "data": null
+}
+```
+
+#### Wrong password — HTTP 401
+
+```json
+{
+  "code": 401,
+  "message": "Wrong Email or Password",
+  "errors": null
+}
+```
+
+#### Authenticated with the wrong role — HTTP 403
+
+```json
+{
+  "code": 403,
+  "message": "Forbidden: Insufficient permissions",
+  "data": null
+}
+```
+
+#### Inactive account — HTTP 403
+
+```json
+{
+  "code": 403,
+  "message": "Forbidden: Account is inactive",
+  "data": null
+}
+```
+
+Login uses a slightly different inactive-account message:
+
+```json
+{
+  "code": 403,
+  "message": "Account is inactive",
+  "errors": null
+}
+```
+
+#### Resource not found — HTTP 404
+
+Admin user:
+
+```json
+{
+  "code": 404,
+  "message": "User not found",
+  "errors": null
+}
+```
+
+Admin location:
+
+```json
+{
+  "code": 404,
+  "message": "Location not found",
+  "errors": null
+}
+```
+
+Buyer and Merchant endpoints generally validate missing IDs as HTTP `422`, not `404`.
+
+#### Operation conflict — HTTP 409
+
+Self-deactivation:
+
+```json
+{
+  "code": 409,
+  "message": "You cannot deactivate your own account",
+  "errors": null
+}
+```
+
+Self-demotion or self-deactivation through user update:
+
+```json
+{
+  "code": 409,
+  "message": "You cannot deactivate or remove the Admin role from your own account",
+  "errors": null
+}
+```
+
+Location used by orders:
+
+```json
+{
+  "code": 409,
+  "message": "Location cannot be deleted because it is used by existing orders",
+  "errors": {
+    "orders": 3
+  }
+}
+```
+
+#### Validation error — HTTP 422
+
+```json
+{
+  "code": 422,
+  "message": "Validation Error",
+  "errors": {
+    "email": [
+      "The email field has already been taken."
+    ],
+    "role_name": [
+      "The selected role name is invalid."
+    ]
+  }
+}
+```
+
+Invalid pagination may use a string instead of field-keyed errors in older Buyer/Merchant controllers:
+
+```json
+{
+  "code": 422,
+  "message": "Validation Error",
+  "errors": "Page and limit must be greater than 0"
+}
+```
+
+#### Internal server error — HTTP 500
+
+Admin and authentication endpoints return a sanitized error:
+
+```json
+{
+  "code": 500,
+  "message": "Internal Server Error",
+  "errors": null
+}
+```
+
+Some older Buyer and Merchant endpoints pass the caught exception into `errors`. Depending on JSON serialization, this commonly appears as:
+
+```json
+{
+  "code": 500,
+  "message": "Internal Server Error",
+  "errors": {}
+}
+```
+
 ## 3. Shared Values
 
 ### Roles
@@ -134,6 +315,17 @@ Authentication and authorization failures:
 | `2` | Processing |
 | `3` | Done |
 | `4` | Cancelled |
+
+### Queue numbers
+
+`queue_number` is assigned by the backend when an order is confirmed:
+
+- Numbering starts at `1`.
+- Each Merchant has an independent queue.
+- Each Merchant's queue resets daily.
+- The value never changes when order or payment status changes.
+- Historical orders created before queue support return `null`.
+- Frontends should display `"-"` when `queue_number` is `null`; never generate a replacement number locally.
 
 ## 4. Authentication
 
@@ -728,7 +920,7 @@ No body.
 GET /user/order/current
 ```
 
-Returns the latest order belonging to the authenticated Buyer.
+Returns the latest order belonging to the authenticated Buyer, including `queue_number`.
 
 ### 6.12 Create Order
 
@@ -773,7 +965,20 @@ Preorder example:
 }
 ```
 
-Success: HTTP `201`. After creation, all temporary cart rows for the Buyer are removed.
+Success: HTTP `201`. Queue allocation, order creation, order-line creation, and temporary-cart cleanup are committed atomically.
+
+```json
+{
+  "code": 201,
+  "message": "Success",
+  "data": {
+    "id": 30,
+    "queue_number": 12
+  }
+}
+```
+
+The queue number is final for the order and must be displayed directly by the frontend.
 
 ### 6.13 Purchase History
 
@@ -781,7 +986,7 @@ Success: HTTP `201`. After creation, all temporary cart rows for the Buyer are r
 GET /user/history
 ```
 
-Returns the Buyer's orders with total price, creation time, first menu summary, merchant summary, and total menu-row count.
+Returns the Buyer's orders with `queue_number`, total price, creation time, first menu summary, merchant summary, and total menu-row count.
 
 ### 6.14 Purchase History Detail
 
@@ -789,7 +994,7 @@ Returns the Buyer's orders with total price, creation time, first menu summary, 
 GET /user/history/{order_id}
 ```
 
-Returns order, user, location, payment, schedule, and all ordered menu rows.
+Returns `queue_number`, order, user, location, payment, schedule, and all ordered menu rows.
 
 ### 6.15 User Order Statistics
 
@@ -952,7 +1157,7 @@ GET /merchant/order/list
 | `limit` | number | No | `10` |
 | `status` | string | No | All; filter accepts `1`, `2`, or `3` |
 
-Returns pagination metadata. Each order contains user, location, bill, order type, payment method, payment status, order status, schedule, preorder flag, and order lines.
+Returns pagination metadata. Each order contains `queue_number`, user, location, bill, order type, payment method, payment status, order status, schedule, preorder flag, and order lines.
 
 ### 7.8 View Order Detail
 
@@ -960,7 +1165,7 @@ Returns pagination metadata. Each order contains user, location, bill, order typ
 GET /merchant/order/detail/{order_id}
 ```
 
-Returns order fields and `user_order_list`.
+Returns order fields, `queue_number`, and `user_order_list`.
 
 ### 7.9 Update Order Status
 
@@ -1046,7 +1251,662 @@ Returns daily grouped income/order totals and overall totals:
 }
 ```
 
-## 8. Pagination Format
+## 8. Endpoint Response Matrix
+
+The error codes in this table use the complete JSON examples from [Error response JSON](#error-response-json).
+
+### Authentication responses
+
+| Method | Endpoint | Success | Possible errors |
+| --- | --- | --- | --- |
+| `POST` | `/user/register` | `201`, mutation response with `data: null` | `422`, `500` |
+| `POST` | `/merchant/register` | `201`, mutation response with `data: null` | `422`, `500` |
+| `POST` | `/login` | `200`, login token response | `401`, `403`, `422`, `500` |
+| `POST` | `/refresh` | `200`, refreshed token response | `401`, `403`, `500` |
+| `POST` | `/logout` | `200`, mutation response with `data: null` | `401`, `403`, `500` |
+
+### Admin responses
+
+| Method | Endpoint | Success | Possible errors |
+| --- | --- | --- | --- |
+| `GET` | `/admin/dashboard` | `200`, dashboard response | `401`, `403`, `500` |
+| `GET` | `/admin/users` | `200`, paginated Admin user response | `401`, `403`, `422`, `500` |
+| `POST` | `/admin/users` | `201`, Admin user object | `401`, `403`, `422`, `500` |
+| `GET` | `/admin/users/{user_id}` | `200`, Admin user detail response | `401`, `403`, `404`, `500` |
+| `PUT` | `/admin/users/{user_id}` | `200`, Admin user object | `401`, `403`, `404`, `409`, `422`, `500` |
+| `DELETE` | `/admin/users/{user_id}` | `200`, deactivation response | `401`, `403`, `404`, `409`, `500` |
+| `GET` | `/admin/locations` | `200`, paginated location response | `401`, `403`, `422`, `500` |
+| `POST` | `/admin/locations` | `201`, location object | `401`, `403`, `422`, `500` |
+| `GET` | `/admin/locations/{location_id}` | `200`, location object | `401`, `403`, `404`, `500` |
+| `PUT` | `/admin/locations/{location_id}` | `200`, location object | `401`, `403`, `404`, `422`, `500` |
+| `DELETE` | `/admin/locations/{location_id}` | `200`, mutation response with `data: null` | `401`, `403`, `404`, `409`, `500` |
+
+### Buyer responses
+
+| Method | Endpoint | Success | Possible errors |
+| --- | --- | --- | --- |
+| `GET` | `/user/menu/list` | `200`, paginated Buyer menu response | `401`, `403`, `422`, `500` |
+| `GET` | `/user/menu/list/{merchant_id}` | `200`, paginated merchant-menu response | `401`, `403`, `422`, `500` |
+| `GET` | `/user/menu/detail/{menu_id}` | `200`, Buyer menu detail response | `401`, `403`, `422`, `500` |
+| `GET` | `/user/menu/sepuluh-ribu` | No working success response | `401`, `403`, `500` |
+| `GET` | `/user/merchant` | `200`, merchant array | `401`, `403`, `422`, `500` |
+| `GET` | `/user/merchant/top` | `200`, recommended menu collection | `401`, `403`, `422`, `500` |
+| `GET` | `/user/order/temp` | `200`, temporary-cart array | `401`, `403`, `422`, `500` |
+| `POST` | `/user/order/temp` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
+| `PUT` | `/user/order/temp/{temp_order_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
+| `DELETE` | `/user/order/temp/{temp_order_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
+| `GET` | `/user/order/current` | `200`, current order object or `null` | `401`, `403`, `422`, `500` |
+| `POST` | `/user/order` | `201`, order ID and assigned queue number | `401`, `403`, `422`, `500` |
+| `GET` | `/user/history` | `200`, purchase-history array | `401`, `403`, `422`, `500` |
+| `GET` | `/user/history/{order_id}` | `200`, purchase-history detail array | `401`, `403`, `422`, `500` |
+| `GET` | `/user/profile/stat` | `200`, user-statistics response | `401`, `403`, `422`, `500` |
+| `GET` | `/user/favorite` | `200`, favorite-menu array | `401`, `403`, `422`, `500` |
+| `PUT` | `/user/favorite/{menu_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
+| `GET` | `/user/locations` | `200`, location array | `401`, `403`, `422`, `500` |
+
+### Merchant responses
+
+| Method | Endpoint | Success | Possible errors |
+| --- | --- | --- | --- |
+| `GET` | `/merchant/menu/list` | `200`, paginated Merchant menu response | `401`, `403`, `422`, `500` |
+| `GET` | `/merchant/menu/detail/{menu_id}` | `200`, Merchant menu detail response | `401`, `403`, `422`, `500` |
+| `GET` | `/merchant/menu/favorite` | `200`, favorite-menu array | `401`, `403`, `422`, `500` |
+| `POST` | `/merchant/menu` | HTTP `200` with JSON `code: 201` and `data: null` | `401`, `403`, `422`, `500` |
+| `PUT` | `/merchant/menu/{menu_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
+| `DELETE` | `/merchant/menu/{menu_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
+| `GET` | `/merchant/order/list` | `200`, paginated Merchant order response | `401`, `403`, `422`, `500` |
+| `GET` | `/merchant/order/detail/{order_id}` | `200`, Merchant order detail response | `401`, `403`, `422`, `500` |
+| `PUT` | `/merchant/order/status/{order_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
+| `PUT` | `/merchant/order/payment/{order_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
+| `GET` | `/merchant/report` | `200`, integer income response | `401`, `403`, `422`, `500` |
+| `GET` | `/merchant/report/daily` | `200`, daily report response | `401`, `403`, `422`, `500` |
+| `GET` | `/merchant/report/weekly` | `200`, weekly report response | `401`, `403`, `422`, `500` |
+
+## 9. Detailed Success Response JSON
+
+### 9.1 Empty mutation response
+
+Used by registration, logout, cart mutation, favorite toggle, Merchant menu mutation, Merchant order updates, and successful location deletion. The HTTP status may be `200`, `201`, or the Merchant menu-creation exception described earlier.
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": null
+}
+```
+
+Registration uses:
+
+```json
+{
+  "code": 201,
+  "message": "Success",
+  "data": null
+}
+```
+
+Merchant menu creation currently returns HTTP `200` with:
+
+```json
+{
+  "code": 201,
+  "message": "Success",
+  "data": null
+}
+```
+
+### 9.2 Admin user list
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "total_data": 2,
+    "page": 1,
+    "limit": 10,
+    "total_page": 1,
+    "data": [
+      {
+        "id": 1,
+        "name": "Admin Example",
+        "email": "admin@example.com",
+        "phone_number": "081234567890",
+        "photo": null,
+        "role_name": "admin",
+        "is_merchant": false,
+        "is_active": true,
+        "created_at": "2026-07-30 08:00:00",
+        "updated_at": "2026-07-30 08:00:00"
+      }
+    ]
+  }
+}
+```
+
+### 9.3 Admin user create/update
+
+```json
+{
+  "code": 201,
+  "message": "Success",
+  "data": {
+    "id": 20,
+    "name": "New Merchant",
+    "email": "newmerchant@example.com",
+    "phone_number": "081234567890",
+    "photo": null,
+    "role_name": "merchant",
+    "is_merchant": true,
+    "is_active": true,
+    "created_at": "2026-07-30 08:00:00",
+    "updated_at": "2026-07-30 08:00:00"
+  }
+}
+```
+
+Update has the same shape with HTTP and JSON code `200`.
+
+### 9.4 Admin user deactivation
+
+```json
+{
+  "code": 200,
+  "message": "User account deactivated successfully",
+  "data": {
+    "id": 20,
+    "is_active": false,
+    "related_records_preserved": true
+  }
+}
+```
+
+### 9.5 Admin location list
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "total_data": 1,
+    "page": 1,
+    "limit": 10,
+    "total_page": 1,
+    "data": [
+      {
+        "id": 3,
+        "name": "Laboratorium Komputer",
+        "created_at": "2026-07-30 08:00:00",
+        "updated_at": "2026-07-30 08:00:00"
+      }
+    ]
+  }
+}
+```
+
+### 9.6 Admin location create/view/update
+
+```json
+{
+  "code": 201,
+  "message": "Success",
+  "data": {
+    "id": 16,
+    "name": "New Building",
+    "created_at": "2026-07-30 08:00:00",
+    "updated_at": "2026-07-30 08:00:00"
+  }
+}
+```
+
+View and update have the same `data` shape with HTTP and JSON code `200`.
+
+### 9.7 Buyer menu list
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "total_data": 1,
+    "page": 1,
+    "limit": 10,
+    "total_page": 1,
+    "data": [
+      {
+        "menu_id": 10,
+        "merchant_name": "Merchant Example",
+        "menu_name": "Fried Rice",
+        "menu_description": "House fried rice",
+        "menu_image": "storage/img/menu/example.jpg",
+        "menu_type": "1",
+        "menu_price": 25000,
+        "menu_status": "1",
+        "menu_is_favorite": "0",
+        "menu_rating": 4.5
+      }
+    ]
+  }
+}
+```
+
+### 9.8 Buyer merchant-menu list
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "total_data": 1,
+    "page": 1,
+    "limit": 10,
+    "total_page": 1,
+    "data": [
+      {
+        "id": 10,
+        "name": "Fried Rice",
+        "description": "House fried rice",
+        "image": "storage/img/menu/example.jpg",
+        "type": "1",
+        "price": 25000,
+        "status": "1",
+        "is_favorite": "0",
+        "rating": 4.5
+      }
+    ]
+  }
+}
+```
+
+### 9.9 Buyer menu detail
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "menu_id": 10,
+    "merchant_id": 5,
+    "merchant_name": "Merchant Example",
+    "menu_name": "Fried Rice",
+    "menu_description": "House fried rice",
+    "menu_image": "storage/img/menu/example.jpg",
+    "menu_type": "1",
+    "menu_price": 25000,
+    "menu_status": "1",
+    "menu_is_favorite": "0",
+    "menu_nutrition_facts": "500 kcal",
+    "menu_rating": 4.5
+  }
+}
+```
+
+### 9.10 Buyer merchant list
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": [
+    {
+      "id": 5,
+      "name": "Merchant Example",
+      "photo": null
+    }
+  ]
+}
+```
+
+### 9.11 Buyer recommended menus
+
+The collection is keyed by Merchant ID:
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "5": {
+      "merchant_id": 5,
+      "menu_id": 10,
+      "total_quantity": "25",
+      "top_menu": "Fried Rice"
+    }
+  }
+}
+```
+
+### 9.12 Buyer temporary cart
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": [
+    {
+      "id": 8,
+      "menu_id": 10,
+      "merchant_id": 5,
+      "merchant_name": "Merchant Example",
+      "menu_name": "Fried Rice",
+      "menu_image": "storage/img/menu/example.jpg",
+      "price": 50000,
+      "quantity": 2,
+      "notes": "No chili"
+    }
+  ]
+}
+```
+
+### 9.13 Buyer current order
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "id": 30,
+    "queue_number": 12,
+    "user_id": 7,
+    "merchant_id": 5,
+    "location_id": 3,
+    "bill": 50000,
+    "type": "1",
+    "payment_method": "2",
+    "status": "1",
+    "schedule": null,
+    "is_preorder": 0,
+    "created_at": "2026-07-30 08:00:00",
+    "updated_at": "2026-07-30 08:00:00",
+    "is_paid": 0
+  }
+}
+```
+
+When the Buyer has no order:
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": null
+}
+```
+
+### 9.14 Buyer purchase history
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": [
+    {
+      "id": 30,
+      "queue_number": 12,
+      "total_price": 50000,
+      "created_at": "2026-07-30 08:00:00",
+      "total_menu": 1,
+      "menu_name": "Fried Rice",
+      "merchant_name": "Merchant Example",
+      "menu_image": "storage/img/menu/example.jpg",
+      "menu_type": "1",
+      "price": 50000,
+      "quantity": 2,
+      "notes": "No chili"
+    }
+  ]
+}
+```
+
+### 9.15 Buyer purchase history detail
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": [
+    {
+      "id": 30,
+      "queue_number": 12,
+      "user_name": "Buyer Example",
+      "location_name": "Laboratorium Komputer",
+      "total_price": 50000,
+      "type": "1",
+      "payment_method": "2",
+      "status": "1",
+      "schedule": null,
+      "is_preorder": 0,
+      "order_list": [
+        {
+          "id": 40,
+          "order_id": 30,
+          "menu_id": 10,
+          "menu_name": "Fried Rice",
+          "merchant_name": "Merchant Example",
+          "menu_image": "storage/img/menu/example.jpg",
+          "menu_type": "1",
+          "price": 50000,
+          "quantity": 2,
+          "notes": "No chili"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 9.16 Buyer favorite menus
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": [
+    {
+      "id": 10,
+      "name": "Fried Rice",
+      "image": "storage/img/menu/example.jpg",
+      "type": "1"
+    }
+  ]
+}
+```
+
+### 9.17 Buyer locations
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": [
+    {
+      "id": 3,
+      "name": "Laboratorium Komputer"
+    }
+  ]
+}
+```
+
+### 9.18 Merchant menu list
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "total_data": 1,
+    "page": 1,
+    "limit": 10,
+    "total_page": 1,
+    "data": [
+      {
+        "id": 10,
+        "name": "Fried Rice",
+        "type": "1",
+        "description": "House fried rice",
+        "image": "storage/img/menu/example.jpg",
+        "price": 25000,
+        "is_favorite": "0",
+        "rating": 4.5
+      }
+    ]
+  }
+}
+```
+
+### 9.19 Merchant menu detail
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "id": 10,
+    "name": "Fried Rice",
+    "description": "House fried rice",
+    "image": "storage/img/menu/example.jpg",
+    "type": "1",
+    "nutrition_facts": "500 kcal",
+    "price": 25000,
+    "status": "1",
+    "is_favorite": "0",
+    "rating": 4.5
+  }
+}
+```
+
+### 9.20 Merchant favorite menus
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": [
+    {
+      "id": 10,
+      "image": "storage/img/menu/example.jpg",
+      "is_favorite": "1"
+    }
+  ]
+}
+```
+
+### 9.21 Merchant order list
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "total_data": 1,
+    "page": 1,
+    "limit": 10,
+    "total_page": 1,
+    "data": [
+      {
+        "id": 30,
+        "queue_number": 12,
+        "user_name": "Buyer Example",
+        "location_name": "Laboratorium Komputer",
+        "bill": 50000,
+        "type": "1",
+        "payment_method": "2",
+        "is_paid": 0,
+        "status": "1",
+        "schedule": null,
+        "is_preorder": 0,
+        "user_order_list": [
+          {
+            "id": 40,
+            "order_id": 30,
+            "menu_id": 10,
+            "menu_name": "Fried Rice",
+            "price": 50000,
+            "quantity": 2,
+            "notes": "No chili"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### 9.22 Merchant order detail
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "id": 30,
+    "queue_number": 12,
+    "user_id": 7,
+    "merchant_id": 5,
+    "location_id": 3,
+    "bill": 50000,
+    "type": "1",
+    "payment_method": "2",
+    "status": "1",
+    "schedule": null,
+    "is_preorder": 0,
+    "user_order_list": [
+      {
+        "id": 40,
+        "order_id": 30,
+        "menu_id": 10,
+        "price": 50000,
+        "quantity": 2,
+        "notes": "No chili"
+      }
+    ]
+  }
+}
+```
+
+### 9.23 Merchant income
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": 150000
+}
+```
+
+### 9.24 Merchant daily report
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {
+    "report": [
+      {
+        "id": 30,
+        "queue_number": 12,
+        "user_id": 7,
+        "merchant_id": 5,
+        "location_id": 3,
+        "order_number": 1,
+        "bill": 50000,
+        "type": "1",
+        "payment_method": "2",
+        "status": "3",
+        "schedule": null,
+        "is_preorder": 0,
+        "created_at": "2026-07-30 08:00:00"
+      }
+    ],
+    "income": 50000
+  }
+}
+```
+
+The weekly-report success JSON is shown in [Weekly Report](#713-weekly-report).
+
+## 10. Pagination Format
 
 Paginated list endpoints generally return:
 
@@ -1066,7 +1926,7 @@ Paginated list endpoints generally return:
 
 The Merchant daily-report endpoint currently returns `report` and `income` without the full pagination metadata.
 
-## 9. JavaScript/Axios Usage
+## 11. JavaScript/Axios Usage
 
 ### Create an API client
 
@@ -1118,7 +1978,245 @@ await api.post('/logout');
 localStorage.removeItem('token');
 ```
 
-## 10. Current Implementation Notes
+## 12. Testing Queue Numbers
+
+### 12.1 Run the automated queue tests
+
+The focused feature test covers:
+
+- First order receives queue number `1`.
+- Second order for the same Merchant and day receives `2`.
+- Queue numbering resets the next day.
+- Different Merchants have independent queues.
+- Rapid allocations do not duplicate numbers.
+- The daily counter has a unique Merchant/date record.
+- Order creation and order-query APIs return `queue_number`.
+- Queue numbers remain unchanged after status and payment updates.
+
+With PHP 8.2+ and SQLite extensions enabled:
+
+```bash
+php artisan test --filter=OrderQueueNumberTest
+```
+
+If the active Laragon PHP installation does not have SQLite enabled, run PHPUnit using the installed extension DLLs:
+
+```powershell
+C:\laragon\bin\php\php-8.2.27-nts-Win32-vs16-x64\php.exe `
+  -d extension=pdo_sqlite `
+  -d extension=sqlite3 `
+  vendor/bin/phpunit tests/Feature/OrderQueueNumberTest.php
+```
+
+### 12.2 Prepare for manual testing
+
+Apply the queue migrations and start Laravel:
+
+```bash
+php artisan migrate
+php artisan serve
+```
+
+Use this base URL:
+
+```text
+http://localhost:8000/api/v1
+```
+
+The test requires:
+
+1. An active Buyer account.
+2. An active Merchant account.
+3. A menu belonging to that Merchant.
+4. The Buyer and Merchant JWT tokens.
+
+### 12.3 Log in as the Buyer
+
+```http
+POST /api/v1/login
+Accept: application/json
+Content-Type: application/json
+```
+
+```json
+{
+  "email": "buyer@example.com",
+  "password": "secure-password"
+}
+```
+
+Save `data.token` from the response as `BUYER_TOKEN`.
+
+### 12.4 Add a menu to the temporary cart
+
+Replace `10` with a real menu ID:
+
+```http
+POST /api/v1/user/order/temp
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer BUYER_TOKEN
+```
+
+```json
+{
+  "menu_id": 10,
+  "quantity": 1,
+  "notes": "Queue test"
+}
+```
+
+### 12.5 Confirm the first order
+
+Replace `5` with the Merchant account ID associated with the selected menu:
+
+```http
+POST /api/v1/user/order
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer BUYER_TOKEN
+```
+
+```json
+{
+  "merchant_id": 5,
+  "type": 2,
+  "payment_method": 1,
+  "is_preorder": false
+}
+```
+
+Expected response:
+
+```json
+{
+  "code": 201,
+  "message": "Success",
+  "data": {
+    "id": 30,
+    "queue_number": 1
+  }
+}
+```
+
+### 12.6 Confirm the second order
+
+Add another menu to the temporary cart and call `POST /user/order` again using the same Merchant.
+
+Expected queue portion:
+
+```json
+{
+  "data": {
+    "queue_number": 2
+  }
+}
+```
+
+Creating an order for a different Merchant should return queue number `1` for that Merchant.
+
+### 12.7 Verify Buyer order responses
+
+Call:
+
+```http
+GET /api/v1/user/order/current
+Authorization: Bearer BUYER_TOKEN
+```
+
+```http
+GET /api/v1/user/history
+Authorization: Bearer BUYER_TOKEN
+```
+
+```http
+GET /api/v1/user/history/{order_id}
+Authorization: Bearer BUYER_TOKEN
+```
+
+Every returned order should contain:
+
+```json
+{
+  "queue_number": 2
+}
+```
+
+Historical orders created before the queue migration return:
+
+```json
+{
+  "queue_number": null
+}
+```
+
+The mobile client should render a null queue number as `"-"`.
+
+### 12.8 Verify Merchant order responses
+
+Log in as the Merchant and save `data.token` as `MERCHANT_TOKEN`.
+
+Call:
+
+```http
+GET /api/v1/merchant/order/list
+Authorization: Bearer MERCHANT_TOKEN
+```
+
+```http
+GET /api/v1/merchant/order/detail/{order_id}
+Authorization: Bearer MERCHANT_TOKEN
+```
+
+Both responses should contain the same `queue_number` assigned during order confirmation.
+
+Update the order status and payment:
+
+```http
+PUT /api/v1/merchant/order/status/{order_id}
+Authorization: Bearer MERCHANT_TOKEN
+Content-Type: application/json
+```
+
+```json
+{
+  "status": "3"
+}
+```
+
+```http
+PUT /api/v1/merchant/order/payment/{order_id}
+Authorization: Bearer MERCHANT_TOKEN
+```
+
+Fetch the order again and verify that `queue_number` has not changed.
+
+### 12.9 Verify database state
+
+Inspect stored orders:
+
+```sql
+SELECT id, merchant_id, queue_number, status, is_paid, created_at
+FROM user_orders
+ORDER BY id;
+```
+
+Inspect the daily counters:
+
+```sql
+SELECT merchant_id, queue_date, last_number
+FROM merchant_daily_queue_counters
+ORDER BY queue_date, merchant_id;
+```
+
+Expected behavior:
+
+- One counter row exists for each Merchant/date pair.
+- `last_number` matches the latest number allocated that day.
+- Different Merchants have separate counters.
+- The automated test uses a simulated clock to verify next-day reset behavior without waiting until the following day.
+
+## 13. Current Implementation Notes
 
 These notes describe the API exactly as currently implemented:
 
@@ -1129,8 +2227,10 @@ These notes describe the API exactly as currently implemented:
 5. Merchant menu update currently requires a new image on every update.
 6. User deletion through the Admin API means deactivation. The record and its historical relations are retained.
 7. JWT logout/refresh requires blacklist support. It is enabled by default and uses the configured Laravel cache store.
+8. Historical orders are not backfilled with potentially misleading queue values. They return `"queue_number": null`; mobile clients should display `"-"`.
+9. This repository does not contain the mobile frontend. The mobile order-confirmation, current-order, history, and Merchant order screens must read the documented `queue_number` field instead of a placeholder.
 
-## 11. Endpoint Summary
+## 14. Endpoint Summary
 
 | Method | Endpoint | Role |
 | --- | --- | --- |

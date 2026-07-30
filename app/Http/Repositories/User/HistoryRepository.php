@@ -4,60 +4,66 @@ namespace App\Http\Repositories\User;
 
 use Illuminate\Support\Facades\DB;
 
-class HistoryRepository {
-    public static function getListPurchaseHistory($user_id) {
+class HistoryRepository
+{
+    public static function getListPurchaseHistory($user_id)
+    {
         $query = DB::table('user_orders')
-        ->where('user_id', $user_id)
-        ->select([
-            'id',
-            'bill as total_price',
-            'created_at',
-        ])
-        ->get();
+            ->where('user_id', $user_id)
+            ->select([
+                'id',
+                'queue_number',
+                'bill as total_price',
+                'created_at',
+            ])
+            ->get();
 
         $data = $query->map(function ($item) {
             $subQuery = DB::table('user_order_list as uol')
-            ->leftJoin('merchant_menu_list as mml', 'mml.id', '=', 'uol.menu_id')
-            ->leftJoin('users as u', 'u.id', '=', 'mml.merchant_id')
-            ->select(
-                'mml.name as menu_name',
-                'u.name as merchant_name',
-                'mml.image as menu_image',
-                'mml.type as menu_type',
-                'uol.price',
-                'uol.quantity',
-                'uol.notes',
-            )
-            ->where('uol.order_id', $item->id)
-            ->first();
-            
+                ->leftJoin('merchant_menu_list as mml', 'mml.id', '=', 'uol.menu_id')
+                ->leftJoin('users as u', 'u.id', '=', 'mml.merchant_id')
+                ->select(
+                    'mml.name as menu_name',
+                    'u.name as merchant_name',
+                    'mml.image as menu_image',
+                    'mml.type as menu_type',
+                    'uol.price',
+                    'uol.quantity',
+                    'uol.notes',
+                )
+                ->where('uol.order_id', $item->id)
+                ->first();
+
             $item->total_menu = self::countTotalMenu($item->id);
             foreach ($subQuery as $key => $value) {
-            $item->$key = $value;
-        }
+                $item->$key = $value;
+            }
+
             return $item;
         });
 
         return $data;
     }
 
-    public static function getHistoryDetail($order_id) {
+    public static function getHistoryDetail($order_id)
+    {
         $query = DB::table('user_orders')
-        ->leftJoin('users', 'users.id', '=', 'user_orders.user_id')
-        ->leftJoin('locations', 'locations.id', '=', 'user_orders.location_id')
-        ->where('user_orders.id', $order_id)
-        ->select([
-            'user_orders.id',
-            'users.name as user_name',
-            'locations.name as location_name',
-            'user_orders.bill as total_price',
-            'user_orders.type',
-            'user_orders.payment_method',
-            'user_orders.status',
-            'user_orders.schedule',
-            'user_orders.is_preorder',
-        ])
-        ->get();
+            ->leftJoin('users', 'users.id', '=', 'user_orders.user_id')
+            ->leftJoin('locations', 'locations.id', '=', 'user_orders.location_id')
+            ->where('user_orders.id', $order_id)
+            ->select([
+                'user_orders.id',
+                'user_orders.queue_number',
+                'users.name as user_name',
+                'locations.name as location_name',
+                'user_orders.bill as total_price',
+                'user_orders.type',
+                'user_orders.payment_method',
+                'user_orders.status',
+                'user_orders.schedule',
+                'user_orders.is_preorder',
+            ])
+            ->get();
 
         $data = $query->map(function ($item) {
             $userOrderList = DB::table('user_order_list')
@@ -78,16 +84,18 @@ class HistoryRepository {
                 )
                 ->get();
             $item->order_list = $userOrderList;
+
             return $item;
         });
 
         return $data;
     }
 
-    public static function countTotalMenu($order_id) {
+    public static function countTotalMenu($order_id)
+    {
         $query = DB::table('user_order_list')
-        ->where('order_id', $order_id)
-        ->count();
+            ->where('order_id', $order_id)
+            ->count();
 
         return $query;
     }

@@ -4,6 +4,8 @@ Parabite Backend is a Laravel 12 JSON API for buyers, merchants, and administrat
 
 Complete endpoint, request-body, response, authentication, and usage documentation is available in [`docs/API.md`](docs/API.md).
 
+Order queue numbers are generated transactionally per Merchant per day and returned by order creation and order-query APIs.
+
 ## Requirements
 
 - PHP 8.2 or newer
