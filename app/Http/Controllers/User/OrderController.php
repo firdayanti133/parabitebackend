@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Http\Repositories\User\MenuRepository;
+use App\Http\Repositories\User\OrderRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-use App\Http\Repositories\User\MenuRepository;
-use App\Http\Repositories\User\OrderRepository;
-
 class OrderController extends Controller
 {
-    public function checkPaymentStatus(Request $request, $order_id) {
+    public function checkPaymentStatus(Request $request, $order_id)
+    {
         $user = $request->get('auth_user');
 
         $validateId = Validator::make(['user_id' => $user->id], [
@@ -22,7 +22,7 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validateId->errors(),
             ], 422);
         }
 
@@ -34,7 +34,7 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validateId->errors(),
             ], 422);
         }
 
@@ -44,19 +44,20 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 200,
                 'message' => 'Success',
-                'data' => $data
+                'data' => $data,
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }
 
-    public function getListTempOrder(Request $request) {
+    public function getListTempOrder(Request $request)
+    {
         $user = $request->get('auth_user');
 
         $validateId = Validator::make(['user_id' => $user->id], [
@@ -67,7 +68,7 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validateId->errors(),
             ], 422);
         }
 
@@ -77,19 +78,20 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 200,
                 'message' => 'Success',
-                'data' => $data
+                'data' => $data,
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }
 
-    public function createTempOrder(Request $request) {
+    public function createTempOrder(Request $request)
+    {
         $validator = Validator::make($request->all(), [
             'menu_id' => 'required|numeric|exists:merchant_menu_list,id',
             'quantity' => 'required|numeric',
@@ -100,7 +102,7 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -118,7 +120,7 @@ class OrderController extends Controller
                 'menu_id' => $menuId,
                 'price' => $totalPrice,
                 'quantity' => $quantity,
-                'notes' => $request->notes
+                'notes' => $request->notes,
             ];
 
             OrderRepository::createTempOrder($data);
@@ -133,12 +135,13 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }
 
-    public function createOrder(Request $request) {
+    public function createOrder(Request $request)
+    {
         $user = $request->get('auth_user');
 
         $validateId = Validator::make(['user_id' => $user->id], [
@@ -149,7 +152,7 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validateId->errors(),
             ], 422);
         }
 
@@ -166,7 +169,7 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -188,28 +191,28 @@ class OrderController extends Controller
                 'status' => 1,
                 'schedule' => $request->schedule ?: null,
                 'is_preorder' => $request->is_preorder,
-                'order_list' => $userOrder
+                'order_list' => $userOrder,
             ];
 
-            OrderRepository::createOrder($data);
-            OrderRepository::removeUserTempOrder($user->id);
+            $order = OrderRepository::createOrder($data);
 
             return response()->json([
                 'code' => 201,
                 'message' => 'Success',
-                'data' => null,
+                'data' => $order,
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }
 
-    public function updateTempOrder(Request $request, $tempOrderId) {
+    public function updateTempOrder(Request $request, $tempOrderId)
+    {
         $validateId = Validator::make(['temp_order_id' => $tempOrderId], [
             'temp_order_id' => 'exists:temp_user_order,id',
         ]);
@@ -218,10 +221,10 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validateId->errors(),
             ], 422);
         }
-        
+
         $validator = Validator::make($request->all(), [
             'quantity' => 'required|numeric',
             'notes' => 'string',
@@ -231,7 +234,7 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -259,21 +262,22 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }
 
-    public function removeTempOrder($tempOrderId) {
+    public function removeTempOrder($tempOrderId)
+    {
         $validator = Validator::make(['temp_order_id' => $tempOrderId], [
             'temp_order_id' => 'exists:temp_user_order,id',
         ]);
-        
+
         if ($validator->fails()) {
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -289,7 +293,7 @@ class OrderController extends Controller
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }

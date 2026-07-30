@@ -316,6 +316,17 @@ Some older Buyer and Merchant endpoints pass the caught exception into `errors`.
 | `3` | Done |
 | `4` | Cancelled |
 
+### Queue numbers
+
+`queue_number` is assigned by the backend when an order is confirmed:
+
+- Numbering starts at `1`.
+- Each Merchant has an independent queue.
+- Each Merchant's queue resets daily.
+- The value never changes when order or payment status changes.
+- Historical orders created before queue support return `null`.
+- Frontends should display `"-"` when `queue_number` is `null`; never generate a replacement number locally.
+
 ## 4. Authentication
 
 ### 4.1 Register Buyer
@@ -909,7 +920,7 @@ No body.
 GET /user/order/current
 ```
 
-Returns the latest order belonging to the authenticated Buyer.
+Returns the latest order belonging to the authenticated Buyer, including `queue_number`.
 
 ### 6.12 Create Order
 
@@ -954,7 +965,20 @@ Preorder example:
 }
 ```
 
-Success: HTTP `201`. After creation, all temporary cart rows for the Buyer are removed.
+Success: HTTP `201`. Queue allocation, order creation, order-line creation, and temporary-cart cleanup are committed atomically.
+
+```json
+{
+  "code": 201,
+  "message": "Success",
+  "data": {
+    "id": 30,
+    "queue_number": 12
+  }
+}
+```
+
+The queue number is final for the order and must be displayed directly by the frontend.
 
 ### 6.13 Purchase History
 
@@ -962,7 +986,7 @@ Success: HTTP `201`. After creation, all temporary cart rows for the Buyer are r
 GET /user/history
 ```
 
-Returns the Buyer's orders with total price, creation time, first menu summary, merchant summary, and total menu-row count.
+Returns the Buyer's orders with `queue_number`, total price, creation time, first menu summary, merchant summary, and total menu-row count.
 
 ### 6.14 Purchase History Detail
 
@@ -970,7 +994,7 @@ Returns the Buyer's orders with total price, creation time, first menu summary, 
 GET /user/history/{order_id}
 ```
 
-Returns order, user, location, payment, schedule, and all ordered menu rows.
+Returns `queue_number`, order, user, location, payment, schedule, and all ordered menu rows.
 
 ### 6.15 User Order Statistics
 
@@ -1133,7 +1157,7 @@ GET /merchant/order/list
 | `limit` | number | No | `10` |
 | `status` | string | No | All; filter accepts `1`, `2`, or `3` |
 
-Returns pagination metadata. Each order contains user, location, bill, order type, payment method, payment status, order status, schedule, preorder flag, and order lines.
+Returns pagination metadata. Each order contains `queue_number`, user, location, bill, order type, payment method, payment status, order status, schedule, preorder flag, and order lines.
 
 ### 7.8 View Order Detail
 
@@ -1141,7 +1165,7 @@ Returns pagination metadata. Each order contains user, location, bill, order typ
 GET /merchant/order/detail/{order_id}
 ```
 
-Returns order fields and `user_order_list`.
+Returns order fields, `queue_number`, and `user_order_list`.
 
 ### 7.9 Update Order Status
 
@@ -1272,7 +1296,7 @@ The error codes in this table use the complete JSON examples from [Error respons
 | `PUT` | `/user/order/temp/{temp_order_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
 | `DELETE` | `/user/order/temp/{temp_order_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
 | `GET` | `/user/order/current` | `200`, current order object or `null` | `401`, `403`, `422`, `500` |
-| `POST` | `/user/order` | `201`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
+| `POST` | `/user/order` | `201`, order ID and assigned queue number | `401`, `403`, `422`, `500` |
 | `GET` | `/user/history` | `200`, purchase-history array | `401`, `403`, `422`, `500` |
 | `GET` | `/user/history/{order_id}` | `200`, purchase-history detail array | `401`, `403`, `422`, `500` |
 | `GET` | `/user/profile/stat` | `200`, user-statistics response | `401`, `403`, `422`, `500` |
@@ -1302,7 +1326,7 @@ The error codes in this table use the complete JSON examples from [Error respons
 
 ### 9.1 Empty mutation response
 
-Used by registration, logout, cart mutation, order creation, favorite toggle, Merchant menu mutation, Merchant order updates, and successful location deletion. The HTTP status may be `200`, `201`, or the Merchant menu-creation exception described earlier.
+Used by registration, logout, cart mutation, favorite toggle, Merchant menu mutation, Merchant order updates, and successful location deletion. The HTTP status may be `200`, `201`, or the Merchant menu-creation exception described earlier.
 
 ```json
 {
@@ -1312,7 +1336,7 @@ Used by registration, logout, cart mutation, order creation, favorite toggle, Me
 }
 ```
 
-Registration and order creation use:
+Registration uses:
 
 ```json
 {
@@ -1583,6 +1607,7 @@ The collection is keyed by Merchant ID:
   "message": "Success",
   "data": {
     "id": 30,
+    "queue_number": 12,
     "user_id": 7,
     "merchant_id": 5,
     "location_id": 3,
@@ -1618,6 +1643,7 @@ When the Buyer has no order:
   "data": [
     {
       "id": 30,
+      "queue_number": 12,
       "total_price": 50000,
       "created_at": "2026-07-30 08:00:00",
       "total_menu": 1,
@@ -1642,6 +1668,7 @@ When the Buyer has no order:
   "data": [
     {
       "id": 30,
+      "queue_number": 12,
       "user_name": "Buyer Example",
       "location_name": "Laboratorium Komputer",
       "total_price": 50000,
@@ -1779,6 +1806,7 @@ When the Buyer has no order:
     "data": [
       {
         "id": 30,
+        "queue_number": 12,
         "user_name": "Buyer Example",
         "location_name": "Laboratorium Komputer",
         "bill": 50000,
@@ -1813,6 +1841,7 @@ When the Buyer has no order:
   "message": "Success",
   "data": {
     "id": 30,
+    "queue_number": 12,
     "user_id": 7,
     "merchant_id": 5,
     "location_id": 3,
@@ -1856,6 +1885,7 @@ When the Buyer has no order:
     "report": [
       {
         "id": 30,
+        "queue_number": 12,
         "user_id": 7,
         "merchant_id": 5,
         "location_id": 3,
@@ -1948,7 +1978,245 @@ await api.post('/logout');
 localStorage.removeItem('token');
 ```
 
-## 12. Current Implementation Notes
+## 12. Testing Queue Numbers
+
+### 12.1 Run the automated queue tests
+
+The focused feature test covers:
+
+- First order receives queue number `1`.
+- Second order for the same Merchant and day receives `2`.
+- Queue numbering resets the next day.
+- Different Merchants have independent queues.
+- Rapid allocations do not duplicate numbers.
+- The daily counter has a unique Merchant/date record.
+- Order creation and order-query APIs return `queue_number`.
+- Queue numbers remain unchanged after status and payment updates.
+
+With PHP 8.2+ and SQLite extensions enabled:
+
+```bash
+php artisan test --filter=OrderQueueNumberTest
+```
+
+If the active Laragon PHP installation does not have SQLite enabled, run PHPUnit using the installed extension DLLs:
+
+```powershell
+C:\laragon\bin\php\php-8.2.27-nts-Win32-vs16-x64\php.exe `
+  -d extension=pdo_sqlite `
+  -d extension=sqlite3 `
+  vendor/bin/phpunit tests/Feature/OrderQueueNumberTest.php
+```
+
+### 12.2 Prepare for manual testing
+
+Apply the queue migrations and start Laravel:
+
+```bash
+php artisan migrate
+php artisan serve
+```
+
+Use this base URL:
+
+```text
+http://localhost:8000/api/v1
+```
+
+The test requires:
+
+1. An active Buyer account.
+2. An active Merchant account.
+3. A menu belonging to that Merchant.
+4. The Buyer and Merchant JWT tokens.
+
+### 12.3 Log in as the Buyer
+
+```http
+POST /api/v1/login
+Accept: application/json
+Content-Type: application/json
+```
+
+```json
+{
+  "email": "buyer@example.com",
+  "password": "secure-password"
+}
+```
+
+Save `data.token` from the response as `BUYER_TOKEN`.
+
+### 12.4 Add a menu to the temporary cart
+
+Replace `10` with a real menu ID:
+
+```http
+POST /api/v1/user/order/temp
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer BUYER_TOKEN
+```
+
+```json
+{
+  "menu_id": 10,
+  "quantity": 1,
+  "notes": "Queue test"
+}
+```
+
+### 12.5 Confirm the first order
+
+Replace `5` with the Merchant account ID associated with the selected menu:
+
+```http
+POST /api/v1/user/order
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer BUYER_TOKEN
+```
+
+```json
+{
+  "merchant_id": 5,
+  "type": 2,
+  "payment_method": 1,
+  "is_preorder": false
+}
+```
+
+Expected response:
+
+```json
+{
+  "code": 201,
+  "message": "Success",
+  "data": {
+    "id": 30,
+    "queue_number": 1
+  }
+}
+```
+
+### 12.6 Confirm the second order
+
+Add another menu to the temporary cart and call `POST /user/order` again using the same Merchant.
+
+Expected queue portion:
+
+```json
+{
+  "data": {
+    "queue_number": 2
+  }
+}
+```
+
+Creating an order for a different Merchant should return queue number `1` for that Merchant.
+
+### 12.7 Verify Buyer order responses
+
+Call:
+
+```http
+GET /api/v1/user/order/current
+Authorization: Bearer BUYER_TOKEN
+```
+
+```http
+GET /api/v1/user/history
+Authorization: Bearer BUYER_TOKEN
+```
+
+```http
+GET /api/v1/user/history/{order_id}
+Authorization: Bearer BUYER_TOKEN
+```
+
+Every returned order should contain:
+
+```json
+{
+  "queue_number": 2
+}
+```
+
+Historical orders created before the queue migration return:
+
+```json
+{
+  "queue_number": null
+}
+```
+
+The mobile client should render a null queue number as `"-"`.
+
+### 12.8 Verify Merchant order responses
+
+Log in as the Merchant and save `data.token` as `MERCHANT_TOKEN`.
+
+Call:
+
+```http
+GET /api/v1/merchant/order/list
+Authorization: Bearer MERCHANT_TOKEN
+```
+
+```http
+GET /api/v1/merchant/order/detail/{order_id}
+Authorization: Bearer MERCHANT_TOKEN
+```
+
+Both responses should contain the same `queue_number` assigned during order confirmation.
+
+Update the order status and payment:
+
+```http
+PUT /api/v1/merchant/order/status/{order_id}
+Authorization: Bearer MERCHANT_TOKEN
+Content-Type: application/json
+```
+
+```json
+{
+  "status": "3"
+}
+```
+
+```http
+PUT /api/v1/merchant/order/payment/{order_id}
+Authorization: Bearer MERCHANT_TOKEN
+```
+
+Fetch the order again and verify that `queue_number` has not changed.
+
+### 12.9 Verify database state
+
+Inspect stored orders:
+
+```sql
+SELECT id, merchant_id, queue_number, status, is_paid, created_at
+FROM user_orders
+ORDER BY id;
+```
+
+Inspect the daily counters:
+
+```sql
+SELECT merchant_id, queue_date, last_number
+FROM merchant_daily_queue_counters
+ORDER BY queue_date, merchant_id;
+```
+
+Expected behavior:
+
+- One counter row exists for each Merchant/date pair.
+- `last_number` matches the latest number allocated that day.
+- Different Merchants have separate counters.
+- The automated test uses a simulated clock to verify next-day reset behavior without waiting until the following day.
+
+## 13. Current Implementation Notes
 
 These notes describe the API exactly as currently implemented:
 
@@ -1959,8 +2227,10 @@ These notes describe the API exactly as currently implemented:
 5. Merchant menu update currently requires a new image on every update.
 6. User deletion through the Admin API means deactivation. The record and its historical relations are retained.
 7. JWT logout/refresh requires blacklist support. It is enabled by default and uses the configured Laravel cache store.
+8. Historical orders are not backfilled with potentially misleading queue values. They return `"queue_number": null`; mobile clients should display `"-"`.
+9. This repository does not contain the mobile frontend. The mobile order-confirmation, current-order, history, and Merchant order screens must read the documented `queue_number` field instead of a placeholder.
 
-## 13. Endpoint Summary
+## 14. Endpoint Summary
 
 | Method | Endpoint | Role |
 | --- | --- | --- |
