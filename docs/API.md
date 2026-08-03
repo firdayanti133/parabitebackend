@@ -7,7 +7,7 @@ Parabite is a Laravel 12 JSON API for three account roles:
 | Role | API value | Responsibilities |
 | --- | --- | --- |
 | Administrator | `admin` | Dashboard statistics, user management, and location management |
-| Buyer | `user` | Browse menus and merchants, manage a temporary cart, create orders, view history, and manage favorites |
+| Buyer | `user` | Browse menus and merchants, manage a temporary cart, create orders, and view history |
 | Merchant/Seller | `merchant` | Manage menus, process orders and payments, and view income reports |
 
 The API uses JWT bearer-token authentication.
@@ -51,13 +51,15 @@ Content-Type: multipart/form-data
 
 ## 2. Common Response Format
 
-Successful responses generally use:
+Every API response uses the same top-level envelope. Successful responses use:
 
 ```json
 {
   "code": 200,
   "message": "Success",
-  "data": {}
+  "data": {},
+  "error_code": null,
+  "errors": null
 }
 ```
 
@@ -67,13 +69,42 @@ Validation failures use HTTP `422`:
 {
   "code": 422,
   "message": "Validation Error",
+  "data": null,
+  "error_code": "VALIDATION_ERROR",
   "errors": {
     "email": [
       "The email field is required."
     ]
-  }
+  },
+  "request_id": "c9bd62be-7848-43ea-a021-bf6071d2d77d"
 }
 ```
+
+All HTTP `4xx` and `5xx` responses include `error_code` for programmatic frontend handling and `request_id` for log correlation. The same request ID is returned in the `X-Request-ID` response header. Clients may send their own `X-Request-ID`; otherwise the backend generates one. Unexpected exceptions are logged server-side, while stack traces, SQL, and exception messages are never returned to clients.
+
+### Stable error codes
+
+| Error code | Meaning |
+| --- | --- |
+| `VALIDATION_ERROR` | One or more request fields failed validation; inspect `errors` |
+| `AUTH_UNAUTHENTICATED` | Authentication is missing or could not be verified |
+| `AUTH_TOKEN_EXPIRED` | Access token expired; call `/refresh` within the refresh window |
+| `AUTH_TOKEN_INVALID` | Token is malformed, invalid, or blacklisted |
+| `AUTH_INVALID_CREDENTIALS` | Email/password combination is incorrect |
+| `AUTH_ACCOUNT_INACTIVE` | Account exists but is inactive |
+| `AUTH_ROLE_FORBIDDEN` | Authenticated role cannot use this endpoint |
+| `AUTH_FORBIDDEN` | Authenticated client is forbidden for another reason |
+| `ROUTE_NOT_FOUND` | API path does not exist |
+| `RESOURCE_NOT_FOUND` | Requested entity does not exist |
+| `METHOD_NOT_ALLOWED` | Path exists but does not support the HTTP method |
+| `RESOURCE_CONFLICT` | Operation conflicts with current resource state |
+| `DUPLICATE_RESOURCE` | A database unique constraint rejected a duplicate |
+| `DATABASE_CONSTRAINT_VIOLATION` | A relational database constraint rejected the operation |
+| `FILE_UPLOAD_FAILED` | Uploaded file could not be stored |
+| `ORDER_CART_EMPTY` | Order creation was attempted with an empty cart |
+| `ORDER_CART_MERCHANT_MISMATCH` | Cart items do not all belong to the submitted Merchant |
+| `LOCATION_IN_USE` | Location is referenced by historical orders |
+| `INTERNAL_SERVER_ERROR` | Unexpected backend failure; report `request_id` |
 
 Authentication and authorization failures:
 
@@ -247,23 +278,16 @@ Invalid pagination may use a string instead of field-keyed errors in older Buyer
 
 #### Internal server error — HTTP 500
 
-Admin and authentication endpoints return a sanitized error:
+All endpoints return a sanitized error:
 
 ```json
 {
   "code": 500,
   "message": "Internal Server Error",
-  "errors": null
-}
-```
-
-Some older Buyer and Merchant endpoints pass the caught exception into `errors`. Depending on JSON serialization, this commonly appears as:
-
-```json
-{
-  "code": 500,
-  "message": "Internal Server Error",
-  "errors": {}
+  "data": null,
+  "error_code": "INTERNAL_SERVER_ERROR",
+  "errors": null,
+  "request_id": "c9bd62be-7848-43ea-a021-bf6071d2d77d"
 }
 ```
 
@@ -283,6 +307,7 @@ Some older Buyer and Merchant endpoints pass the caught exception into `errors`.
 | --- | --- |
 | `1` | Food |
 | `2` | Drink |
+| `3` | Snack |
 
 ### Menu statuses
 
@@ -645,10 +670,7 @@ The response includes non-sensitive account fields and related-record counts:
       "buyer_orders": 3,
       "merchant_orders": 0,
       "menus": 0,
-      "temporary_orders": 0,
-      "ratings": 2,
-      "favorites": 1,
-      "wishlists": 0
+      "temporary_orders": 0
     }
   }
 }
@@ -708,7 +730,7 @@ DELETE /admin/users/{user_id}
 
 No body.
 
-This is a safe deactivation, not a hard deletion. Orders, menus, ratings, favorites, wishlists, and other historical records remain stored.
+This is a safe deactivation, not a hard deletion. Orders, menus, and other historical records remain stored.
 
 An Admin cannot deactivate their own account. That attempt returns HTTP `409`.
 
@@ -809,7 +831,7 @@ Example:
 GET /user/menu/list?page=1&limit=10&search=rice&type=1
 ```
 
-Each item contains menu ID, merchant name, menu information, price, status, favorite flag, and average rating.
+Each item contains menu ID, merchant name, menu information, price, and status.
 
 ### 6.2 List Menus From One Merchant
 
@@ -833,7 +855,7 @@ GET /user/menu/list/{merchant_id}
 GET /user/menu/detail/{menu_id}
 ```
 
-Returns menu and merchant information, nutrition facts, status, favorite flag, price, and average rating.
+Returns menu and merchant information, nutrition facts, status, and price.
 
 ### 6.4 Menus Under Ten Thousand
 
@@ -841,7 +863,9 @@ Returns menu and merchant information, nutrition facts, status, favorite flag, p
 GET /user/menu/sepuluh-ribu
 ```
 
-**Current status: unavailable.** The route is registered, but `User\DashboardController::getSepuluhRibuMenu` is not implemented. Calling it currently produces a server error. Do not integrate this endpoint until the controller method is added.
+Returns menus priced at or below `10000` using the standard paginated menu-list response.
+
+Optional query parameters: `page` (default `1`), `limit` (default `10`, maximum `100`), and `search`.
 
 ### 6.5 List Merchants
 
@@ -1015,23 +1039,7 @@ Returns:
 }
 ```
 
-### 6.16 List Favorite Menus
-
-```http
-GET /user/favorite
-```
-
-Returns favorite menu IDs, names, images, and types.
-
-### 6.17 Toggle Favorite Menu
-
-```http
-PUT /user/favorite/{menu_id}
-```
-
-No body. If the favorite exists it is removed; otherwise it is created.
-
-### 6.18 List Delivery Locations
+### 6.16 List Delivery Locations
 
 ```http
 GET /user/locations
@@ -1053,9 +1061,9 @@ GET /merchant/menu/list
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `page` | number | See note | Page number |
-| `limit` | number | See note | Items per page |
-| `type` | string | No | `1` or `2` |
+| `page` | number | No | Page number; default `1` |
+| `limit` | number | No | Items per page; default `10` |
+| `type` | string | No | `1`, `2`, or `3` |
 
 Example:
 
@@ -1063,25 +1071,15 @@ Example:
 GET /merchant/menu/list?page=1&limit=10&type=1
 ```
 
-**Current implementation note:** explicitly provide `page` and `limit`. The controller converts missing values to zero before applying defaults, causing a `422` response when they are omitted.
-
 ### 7.2 View Merchant Menu Detail
 
 ```http
 GET /merchant/menu/detail/{menu_id}
 ```
 
-Returns the menu fields and average rating.
+Returns the menu fields.
 
-### 7.3 List Merchant Favorite Menus
-
-```http
-GET /merchant/menu/favorite
-```
-
-Returns menu ID, image, and favorite flag for menus marked as Merchant favorites.
-
-### 7.4 Create Menu
+### 7.3 Create Menu
 
 ```http
 POST /merchant/menu
@@ -1095,9 +1093,9 @@ Content-Type: multipart/form-data
 | `name` | string | Yes | Maximum 255 characters |
 | `description` | string | Yes | Maximum 255 characters |
 | `image` | file | Yes | JPEG or PNG, maximum 2 MB |
-| `type` | string | Yes | Use `1` or `2` |
+| `type` | integer | Yes | `1` food, `2` drink, `3` snack |
 | `nutrition_facts` | string | Yes | Maximum 255 characters |
-| `price` | string | Yes | Maximum 255 characters |
+| `price` | integer | Yes | Minimum `1` |
 
 cURL:
 
@@ -1113,29 +1111,28 @@ curl -X POST "$BASE_URL/merchant/menu" \
   -F "price=25000"
 ```
 
-The current controller returns HTTP `200` with JSON field `"code": 201`.
+Success returns HTTP `201` with `code: 201`, `data: null`, `error_code: null`, and `errors: null`.
 
-### 7.5 Update Menu
+### 7.4 Update Menu
 
 ```http
 PUT /merchant/menu/{menu_id}
 Content-Type: multipart/form-data
 ```
 
-All fields are required:
+All fields except `image` are required. If `image` is omitted, the existing image is retained:
 
 | Field | Type | Allowed values |
 | --- | --- | --- |
 | `name` | string | Maximum 255 characters |
 | `description` | string | Maximum 255 characters |
-| `image` | file | JPEG/PNG, maximum 2 MB |
-| `type` | string | `1`, `2` |
+| `image` | file | Optional; JPEG/PNG, maximum 2 MB |
+| `type` | integer | `1`, `2`, `3` |
 | `nutrition_facts` | string | Maximum 255 characters |
-| `price` | number | Maximum numeric value 255 under the current validator |
+| `price` | integer | Minimum `1` |
 | `status` | string | `1`, `2`, `3` |
-| `is_favorite` | string | `0`, `1` |
 
-### 7.6 Delete Menu
+### 7.5 Delete Menu
 
 ```http
 DELETE /merchant/menu/{menu_id}
@@ -1143,7 +1140,7 @@ DELETE /merchant/menu/{menu_id}
 
 No body.
 
-### 7.7 List Orders
+### 7.6 List Orders
 
 ```http
 GET /merchant/order/list
@@ -1159,7 +1156,7 @@ GET /merchant/order/list
 
 Returns pagination metadata. Each order contains `queue_number`, user, location, bill, order type, payment method, payment status, order status, schedule, preorder flag, and order lines.
 
-### 7.8 View Order Detail
+### 7.7 View Order Detail
 
 ```http
 GET /merchant/order/detail/{order_id}
@@ -1167,7 +1164,7 @@ GET /merchant/order/detail/{order_id}
 
 Returns order fields, `queue_number`, and `user_order_list`.
 
-### 7.9 Update Order Status
+### 7.8 Update Order Status
 
 ```http
 PUT /merchant/order/status/{order_id}
@@ -1181,7 +1178,7 @@ PUT /merchant/order/status/{order_id}
 
 Use the documented order status values `1`–`4`.
 
-### 7.10 Mark Order Paid
+### 7.9 Mark Order Paid
 
 ```http
 PUT /merchant/order/payment/{order_id}
@@ -1189,7 +1186,7 @@ PUT /merchant/order/payment/{order_id}
 
 No body. Sets `is_paid` to `true`.
 
-### 7.11 Today's Income
+### 7.10 Today's Income
 
 ```http
 GET /merchant/report
@@ -1197,7 +1194,7 @@ GET /merchant/report
 
 No query parameters or body. Returns the sum of today's paid order bills for the authenticated Merchant.
 
-### 7.12 Daily Paid/Completed Orders
+### 7.11 Daily Paid/Completed Orders
 
 ```http
 GET /merchant/report/daily
@@ -1212,7 +1209,7 @@ GET /merchant/report/daily
 
 Returns today's completed and paid orders plus today's total income.
 
-### 7.13 Weekly Report
+### 7.12 Weekly Report
 
 ```http
 GET /merchant/report/weekly
@@ -1288,7 +1285,7 @@ The error codes in this table use the complete JSON examples from [Error respons
 | `GET` | `/user/menu/list` | `200`, paginated Buyer menu response | `401`, `403`, `422`, `500` |
 | `GET` | `/user/menu/list/{merchant_id}` | `200`, paginated merchant-menu response | `401`, `403`, `422`, `500` |
 | `GET` | `/user/menu/detail/{menu_id}` | `200`, Buyer menu detail response | `401`, `403`, `422`, `500` |
-| `GET` | `/user/menu/sepuluh-ribu` | No working success response | `401`, `403`, `500` |
+| `GET` | `/user/menu/sepuluh-ribu` | `200`, paginated menus priced at or below `10000` | `401`, `403`, `422`, `500` |
 | `GET` | `/user/merchant` | `200`, merchant array | `401`, `403`, `422`, `500` |
 | `GET` | `/user/merchant/top` | `200`, recommended menu collection | `401`, `403`, `422`, `500` |
 | `GET` | `/user/order/temp` | `200`, temporary-cart array | `401`, `403`, `422`, `500` |
@@ -1300,8 +1297,6 @@ The error codes in this table use the complete JSON examples from [Error respons
 | `GET` | `/user/history` | `200`, purchase-history array | `401`, `403`, `422`, `500` |
 | `GET` | `/user/history/{order_id}` | `200`, purchase-history detail array | `401`, `403`, `422`, `500` |
 | `GET` | `/user/profile/stat` | `200`, user-statistics response | `401`, `403`, `422`, `500` |
-| `GET` | `/user/favorite` | `200`, favorite-menu array | `401`, `403`, `422`, `500` |
-| `PUT` | `/user/favorite/{menu_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
 | `GET` | `/user/locations` | `200`, location array | `401`, `403`, `422`, `500` |
 
 ### Merchant responses
@@ -1310,8 +1305,7 @@ The error codes in this table use the complete JSON examples from [Error respons
 | --- | --- | --- | --- |
 | `GET` | `/merchant/menu/list` | `200`, paginated Merchant menu response | `401`, `403`, `422`, `500` |
 | `GET` | `/merchant/menu/detail/{menu_id}` | `200`, Merchant menu detail response | `401`, `403`, `422`, `500` |
-| `GET` | `/merchant/menu/favorite` | `200`, favorite-menu array | `401`, `403`, `422`, `500` |
-| `POST` | `/merchant/menu` | HTTP `200` with JSON `code: 201` and `data: null` | `401`, `403`, `422`, `500` |
+| `POST` | `/merchant/menu` | `201`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
 | `PUT` | `/merchant/menu/{menu_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
 | `DELETE` | `/merchant/menu/{menu_id}` | `200`, mutation response with `data: null` | `401`, `403`, `422`, `500` |
 | `GET` | `/merchant/order/list` | `200`, paginated Merchant order response | `401`, `403`, `422`, `500` |
@@ -1326,7 +1320,7 @@ The error codes in this table use the complete JSON examples from [Error respons
 
 ### 9.1 Empty mutation response
 
-Used by registration, logout, cart mutation, favorite toggle, Merchant menu mutation, Merchant order updates, and successful location deletion. The HTTP status may be `200`, `201`, or the Merchant menu-creation exception described earlier.
+Used by registration, logout, cart mutation, Merchant menu mutation, Merchant order updates, and successful location deletion. The HTTP status may be `200` or `201`.
 
 ```json
 {
@@ -1346,7 +1340,7 @@ Registration uses:
 }
 ```
 
-Merchant menu creation currently returns HTTP `200` with:
+Merchant menu creation returns HTTP `201` with:
 
 ```json
 {
@@ -1482,9 +1476,7 @@ View and update have the same `data` shape with HTTP and JSON code `200`.
         "menu_image": "storage/img/menu/example.jpg",
         "menu_type": "1",
         "menu_price": 25000,
-        "menu_status": "1",
-        "menu_is_favorite": "0",
-        "menu_rating": 4.5
+        "menu_status": "1"
       }
     ]
   }
@@ -1510,9 +1502,7 @@ View and update have the same `data` shape with HTTP and JSON code `200`.
         "image": "storage/img/menu/example.jpg",
         "type": "1",
         "price": 25000,
-        "status": "1",
-        "is_favorite": "0",
-        "rating": 4.5
+        "status": "1"
       }
     ]
   }
@@ -1535,9 +1525,7 @@ View and update have the same `data` shape with HTTP and JSON code `200`.
     "menu_type": "1",
     "menu_price": 25000,
     "menu_status": "1",
-    "menu_is_favorite": "0",
-    "menu_nutrition_facts": "500 kcal",
-    "menu_rating": 4.5
+    "menu_nutrition_facts": "500 kcal"
   }
 }
 ```
@@ -1696,24 +1684,7 @@ When the Buyer has no order:
 }
 ```
 
-### 9.16 Buyer favorite menus
-
-```json
-{
-  "code": 200,
-  "message": "Success",
-  "data": [
-    {
-      "id": 10,
-      "name": "Fried Rice",
-      "image": "storage/img/menu/example.jpg",
-      "type": "1"
-    }
-  ]
-}
-```
-
-### 9.17 Buyer locations
+### 9.16 Buyer locations
 
 ```json
 {
@@ -1728,7 +1699,7 @@ When the Buyer has no order:
 }
 ```
 
-### 9.18 Merchant menu list
+### 9.17 Merchant menu list
 
 ```json
 {
@@ -1746,16 +1717,14 @@ When the Buyer has no order:
         "type": "1",
         "description": "House fried rice",
         "image": "storage/img/menu/example.jpg",
-        "price": 25000,
-        "is_favorite": "0",
-        "rating": 4.5
+        "price": 25000
       }
     ]
   }
 }
 ```
 
-### 9.19 Merchant menu detail
+### 9.18 Merchant menu detail
 
 ```json
 {
@@ -1769,30 +1738,12 @@ When the Buyer has no order:
     "type": "1",
     "nutrition_facts": "500 kcal",
     "price": 25000,
-    "status": "1",
-    "is_favorite": "0",
-    "rating": 4.5
+    "status": "1"
   }
 }
 ```
 
-### 9.20 Merchant favorite menus
-
-```json
-{
-  "code": 200,
-  "message": "Success",
-  "data": [
-    {
-      "id": 10,
-      "image": "storage/img/menu/example.jpg",
-      "is_favorite": "1"
-    }
-  ]
-}
-```
-
-### 9.21 Merchant order list
+### 9.19 Merchant order list
 
 ```json
 {
@@ -1833,7 +1784,7 @@ When the Buyer has no order:
 }
 ```
 
-### 9.22 Merchant order detail
+### 9.20 Merchant order detail
 
 ```json
 {
@@ -1865,7 +1816,7 @@ When the Buyer has no order:
 }
 ```
 
-### 9.23 Merchant income
+### 9.21 Merchant income
 
 ```json
 {
@@ -1875,7 +1826,7 @@ When the Buyer has no order:
 }
 ```
 
-### 9.24 Merchant daily report
+### 9.22 Merchant daily report
 
 ```json
 {
@@ -2220,15 +2171,14 @@ Expected behavior:
 
 These notes describe the API exactly as currently implemented:
 
-1. `GET /user/menu/sepuluh-ribu` is registered but has no controller implementation.
-2. `GET /merchant/menu/list` should always receive explicit positive `page` and `limit` values.
-3. The menu database schema supports types `1` and `2`. Some older request validators also accept `3`; clients should not send `3`.
-4. Merchant menu creation returns HTTP `200` even though its JSON `code` is `201`.
-5. Merchant menu update currently requires a new image on every update.
-6. User deletion through the Admin API means deactivation. The record and its historical relations are retained.
-7. JWT logout/refresh requires blacklist support. It is enabled by default and uses the configured Laravel cache store.
-8. Historical orders are not backfilled with potentially misleading queue values. They return `"queue_number": null`; mobile clients should display `"-"`.
-9. This repository does not contain the mobile frontend. The mobile order-confirmation, current-order, history, and Merchant order screens must read the documented `queue_number` field instead of a placeholder.
+1. Menu type `3` is supported for snacks. Apply all pending migrations before sending snack creation requests.
+2. Merchant menu images are stored on the `public` disk under `img/menu`; run `php artisan storage:link` when serving uploaded files locally.
+3. Migration `2026_08_03_000001_remove_unused_menu_engagement_features` permanently deletes existing menu ratings, Buyer wishlists, and Buyer favorite-menu records. Back up that data before migration if it may be needed later.
+4. Rating, wishlist, and favorite-menu APIs and response fields are no longer supported. Removed URLs return `404` or `405` depending on whether a parameterized route matches the same path.
+5. User deletion through the Admin API means deactivation. The record and its historical relations are retained.
+6. JWT logout/refresh requires blacklist support. It is enabled by default and uses the configured Laravel cache store.
+7. Historical orders are not backfilled with potentially misleading queue values. They return `"queue_number": null`; mobile clients should display `"-"`.
+8. This repository does not contain the mobile frontend. The mobile order-confirmation, current-order, history, and Merchant order screens must read the documented `queue_number` field instead of a placeholder.
 
 ## 14. Endpoint Summary
 
@@ -2247,7 +2197,7 @@ These notes describe the API exactly as currently implemented:
 | `GET` | `/user/menu/list` | Buyer |
 | `GET` | `/user/menu/list/{merchant_id}` | Buyer |
 | `GET` | `/user/menu/detail/{menu_id}` | Buyer |
-| `GET` | `/user/menu/sepuluh-ribu` | Buyer; currently unavailable |
+| `GET` | `/user/menu/sepuluh-ribu` | Buyer |
 | `GET` | `/user/merchant` | Buyer |
 | `GET` | `/user/merchant/top` | Buyer |
 | `GET`, `POST` | `/user/order/temp` | Buyer |
@@ -2257,12 +2207,9 @@ These notes describe the API exactly as currently implemented:
 | `GET` | `/user/history` | Buyer |
 | `GET` | `/user/history/{order_id}` | Buyer |
 | `GET` | `/user/profile/stat` | Buyer |
-| `GET` | `/user/favorite` | Buyer |
-| `PUT` | `/user/favorite/{menu_id}` | Buyer |
 | `GET` | `/user/locations` | Buyer |
 | `GET` | `/merchant/menu/list` | Merchant |
 | `GET` | `/merchant/menu/detail/{menu_id}` | Merchant |
-| `GET` | `/merchant/menu/favorite` | Merchant |
 | `POST` | `/merchant/menu` | Merchant |
 | `PUT`, `DELETE` | `/merchant/menu/{menu_id}` | Merchant |
 | `GET` | `/merchant/order/list` | Merchant |
