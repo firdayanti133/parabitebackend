@@ -3,240 +3,196 @@
 namespace App\Http\Controllers\Merchant;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-
 use App\Http\Repositories\Merchant\MenuRepository;
+use App\Http\Responses\ApiResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class MenuController extends Controller
 {
-    public function getMenuDetail($menu_id) {
-        $validateId = Validator::make(['menu_id' => $menu_id], [
-            'menu_id' => '|numeric|max:255|exists:merchant_menu_list,id',    
-        ]);
-
-        if ($validateId->fails()) {
-            return response()->json([
-                'code' => 422,
-                'message' => 'Validation Error',
-                'errors' => $validateId->errors()
-            ], 422);
-        }
-
-        try {
-            $data = MenuRepository::getMenuDetail($menu_id);
-
-            return response()->json([
-                'code' => 200,
-                'message' => 'Success',
-                'data' => $data
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'message' => 'Internal Server Error',
-                'errors' => $e
-            ], 500);
-        }
-    }
-
-    public function createMenu(Request $request) {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'description' => 'required|string|max:255',
-            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-            'type' => 'required|string|max:255|in:1,2,3',
-            'nutrition_facts' => 'required|string|max:255',
-            'price' => 'required|string|max:255',
+    public function getMenuDetail($menuId)
+    {
+        $validator = Validator::make(['menu_id' => $menuId], [
+            'menu_id' => 'required|integer|exists:merchant_menu_list,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-       $user = $request->get('auth_user');
-
-        $validateId = Validator::make(['id' => $user->id], [
-            'id' => 'exists:users,id',
-        ]);
-
-        if ($validateId->fails()) {
-            return response()->json([
-                'code' => 422,
-                'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         try {
-            $photoPath = null;
-            if ($request->hasFile('image')) {
-                $file = $request->file('image');
-                $extension = $file->getClientOriginalExtension();
-                $filename = time() . '.' . $extension;
-                $path = $file->move('storage/img/menu', $filename);
-                $photoPath = $path;
-            }
+            return response()->json([
+                'code' => 200,
+                'message' => 'Success',
+                'data' => MenuRepository::getMenuDetail($menuId),
+            ]);
+        } catch (\Throwable $exception) {
+            return ApiResponse::fromException($exception, request());
+        }
+    }
 
-            $data = [
-                'merchant_id' => $user->id,
-                'name' => $request->name,
-                'description' => $request->description,
-                'image' => $photoPath,
-                'type' => $request->type,
-                'nutrition_facts' => $request->nutrition_facts,
-                'price' => $request->price
-            ];
+    public function createMenu(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'description' => 'required|string|max:255',
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'type' => 'required|integer|in:1,2,3',
+            'nutrition_facts' => 'required|string|max:255',
+            'price' => 'required|integer|min:1',
+        ]);
 
-            MenuRepository::createMenu($data);
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation Error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $merchant = $request->get('auth_user');
+
+        try {
+            MenuRepository::createMenu([
+                'merchant_id' => $merchant->id,
+                'name' => trim($request->name),
+                'description' => trim($request->description),
+                'image' => $this->storeMenuImage($request),
+                'type' => (int) $request->type,
+                'nutrition_facts' => trim($request->nutrition_facts),
+                'price' => (int) $request->price,
+            ]);
 
             return response()->json([
                 'code' => 201,
                 'message' => 'Success',
-                'data' => null
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'message' => 'Internal Server Error',
-                'errors' => $e
-            ], 500);
+                'data' => null,
+            ], 201);
+        } catch (\Throwable $exception) {
+            return ApiResponse::fromException($exception, $request);
         }
     }
 
-    public function updateMenu(Request $request, $menu_id) {
+    public function updateMenu(Request $request, $menuId)
+    {
         $merchant = $request->get('auth_user');
-
-        $validateId = Validator::make(['merchant_id' => $merchant->id], [
-            'merchant_id' => 'exists:users,id',
+        $menuIdValidator = Validator::make(['menu_id' => $menuId], [
+            'menu_id' => 'required|integer|exists:merchant_menu_list,id',
         ]);
 
-        if ($validateId->fails()) {
+        if ($menuIdValidator->fails()) {
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $menuIdValidator->errors(),
             ], 422);
         }
 
-        $validateId = Validator::make(['menu_id' => $menu_id], [
-            'menu_id' => 'exists:merchant_menu_list,id',
-        ]);
-
-        if ($validateId->fails()) {
+        if (! MenuRepository::belongsToMerchant($menuId, $merchant->id)) {
             return response()->json([
-                'code' => 422,
-                'message' => 'Validation Error',
-                'errors' => $validateId->errors()
-            ], 422);
+                'code' => 403,
+                'message' => 'Forbidden: Menu does not belong to this merchant',
+                'errors' => null,
+            ], 403);
         }
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'description' => 'required|string|max:255',
-            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-            'type' => 'required|string|max:255|in:1,2',
+            'image' => 'sometimes|image|mimes:jpeg,png,jpg|max:2048',
+            'type' => 'required|integer|in:1,2,3',
             'nutrition_facts' => 'required|string|max:255',
-            'price' => 'required|numeric|max:255',
-            'status' => 'required|string|max:255|in:1,2,3',
-            'is_favorite' => 'required|string|max:255|in:0,1',
+            'price' => 'required|integer|min:1',
+            'status' => 'required|integer|in:1,2,3',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         try {
-            $photoPath = null;
-            if ($request->hasFile('image')) {
-                $file = $request->file('image');
-                $extension = $file->getClientOriginalExtension();
-                $filename = time() . '.' . $extension;
-                $path = $file->move('storage/img/menu', $filename);
-                $photoPath = $path;
-            }
+            $menu = MenuRepository::getMenuDetail($menuId);
+            $photoPath = $request->hasFile('image')
+                ? $this->storeMenuImage($request)
+                : $menu['image'];
 
-            $data = [
-                'id' => $menu_id,
-                'name' => $request->name,
-                'description' => $request->description,
+            MenuRepository::updateMenu([
+                'id' => $menuId,
+                'name' => trim($request->name),
+                'description' => trim($request->description),
                 'image' => $photoPath,
-                'type' => $request->type,
-                'nutrition_facts' => $request->nutrition_facts,
-                'price' => $request->price,
-                'status' => $request->status,
-                'is_favorite' => $request->is_favorite
-            ];
-
-            MenuRepository::updateMenu($data);
+                'type' => (int) $request->type,
+                'nutrition_facts' => trim($request->nutrition_facts),
+                'price' => (int) $request->price,
+                'status' => (int) $request->status,
+            ]);
 
             return response()->json([
                 'code' => 200,
                 'message' => 'Success',
-                'data' => null
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'message' => 'Internal Server Error',
-                'errors' => $e
-            ], 500);
+                'data' => null,
+            ]);
+        } catch (\Throwable $exception) {
+            return ApiResponse::fromException($exception, $request);
         }
     }
 
-    public function deleteMenu (Request $request, $menu_id) {
+    public function deleteMenu(Request $request, $menuId)
+    {
         $merchant = $request->get('auth_user');
-
-        $validateId = Validator::make(['merchant_id' => $merchant->id], [
-            'merchant_id' => 'exists:users,id',
+        $validator = Validator::make(['menu_id' => $menuId], [
+            'menu_id' => 'required|integer|exists:merchant_menu_list,id',
         ]);
-        
-        if ($validateId->fails()) {
+
+        if ($validator->fails()) {
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
-        $validateId = Validator::make(['menu_id' => $menu_id], [
-            'menu_id' => 'exists:merchant_menu_list,id',
-        ]);
-
-        if ($validateId->fails()) {
+        if (! MenuRepository::belongsToMerchant($menuId, $merchant->id)) {
             return response()->json([
-                'code' => 422,
-                'message' => 'Validation Error',
-                'errors' => $validateId->errors()
-            ], 422);
+                'code' => 403,
+                'message' => 'Forbidden: Menu does not belong to this merchant',
+                'errors' => null,
+            ], 403);
         }
 
         try {
-            MenuRepository::deleteMenu($menu_id);
+            MenuRepository::deleteMenu($menuId);
 
             return response()->json([
                 'code' => 200,
                 'message' => 'Success',
-                'data' => null
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'message' => 'Internal Server Error',
-                'errors' => $e
-            ], 500);
+                'data' => null,
+            ]);
+        } catch (\Throwable $exception) {
+            return ApiResponse::fromException($exception, $request);
         }
+    }
+
+    private function storeMenuImage(Request $request): string
+    {
+        $file = $request->file('image');
+        $filename = Str::uuid().'.'.$file->extension();
+        $path = Storage::disk('public')->putFileAs('img/menu', $file, $filename);
+
+        if (! $path) {
+            throw new \RuntimeException('Unable to store the uploaded menu image');
+        }
+
+        return 'storage/'.$path;
     }
 }

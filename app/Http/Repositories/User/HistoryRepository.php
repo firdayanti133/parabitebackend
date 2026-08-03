@@ -35,8 +35,10 @@ class HistoryRepository
                 ->first();
 
             $item->total_menu = self::countTotalMenu($item->id);
-            foreach ($subQuery as $key => $value) {
-                $item->$key = $value;
+            if ($subQuery) {
+                foreach ($subQuery as $key => $value) {
+                    $item->$key = $value;
+                }
             }
 
             return $item;

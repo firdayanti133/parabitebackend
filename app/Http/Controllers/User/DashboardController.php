@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Http\Repositories\User\MenuRepository;
+use App\Http\Repositories\User\MerchantRepository;
+use App\Http\Repositories\User\OrderRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-use App\Http\Repositories\User\MenuRepository;
-use App\Http\Repositories\User\OrderRepository;
-use App\Http\Repositories\User\MerchantRepository;
-
 class DashboardController extends Controller
 {
-    public function getCurrentOrder(Request $request) {
+    public function getCurrentOrder(Request $request)
+    {
         $user = $request->get('auth_user');
 
         $validateId = Validator::make(['user_id' => $user->id], [
@@ -23,7 +23,7 @@ class DashboardController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validateId->errors(),
             ], 422);
         }
 
@@ -33,18 +33,20 @@ class DashboardController extends Controller
             return response()->json([
                 'code' => 200,
                 'message' => 'Success',
-                'data' => $data
+                'data' => $data,
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }
-    public function getListMenu(Request $request) {
+
+    public function getListMenu(Request $request)
+    {
         $validator = Validator::make($request->all(), [
             'page' => 'numeric',
             'limit' => 'numeric',
@@ -56,7 +58,7 @@ class DashboardController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -69,7 +71,7 @@ class DashboardController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => 'Page and limit must be greater than 0'
+                'errors' => 'Page and limit must be greater than 0',
             ], 422);
         }
 
@@ -87,29 +89,30 @@ class DashboardController extends Controller
                     'page' => $page,
                     'limit' => $limit,
                     'total_page' => $totalPage,
-                    'data' => $data
-                ]
+                    'data' => $data,
+                ],
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }
 
-    public function getMerchantListMenu(Request $request, $merchant_id) {
+    public function getMerchantListMenu(Request $request, $merchant_id)
+    {
         $validateId = Validator::make(['merchant_id' => $merchant_id], [
             'merchant_id' => 'exists:users,id',
         ]);
-        
+
         if ($validateId->fails()) {
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validateId->errors(),
             ], 422);
         }
 
@@ -118,12 +121,12 @@ class DashboardController extends Controller
             'limit' => 'numeric',
             'search' => 'string',
         ]);
-        
+
         if ($validator->fails()) {
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -135,7 +138,7 @@ class DashboardController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => 'Page and limit must be greater than 0'
+                'errors' => 'Page and limit must be greater than 0',
             ], 422);
         }
 
@@ -153,29 +156,74 @@ class DashboardController extends Controller
                     'page' => $page,
                     'limit' => $limit,
                     'total_page' => $totalPage,
-                    'data' => $data
-                ]
+                    'data' => $data,
+                ],
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }
 
-    public function getMenuDetail($menu_id) {
+    public function getSepuluhRibuMenu(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'page' => 'integer|min:1',
+            'limit' => 'integer|min:1|max:100',
+            'search' => 'string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 422,
+                'message' => 'Validation Error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $page = (int) $request->input('page', 1);
+        $limit = (int) $request->input('limit', 10);
+        $search = $request->input('search', '');
+
+        try {
+            $data = MenuRepository::getMenusUnderPrice($page, $limit, $search);
+            $totalData = MenuRepository::countMenusUnderPrice($search);
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Success',
+                'data' => [
+                    'total_data' => $totalData,
+                    'page' => $page,
+                    'limit' => $limit,
+                    'total_page' => (int) ceil($totalData / $limit),
+                    'data' => $data,
+                ],
+            ]);
+        } catch (\Exception $exception) {
+            return response()->json([
+                'code' => 500,
+                'message' => 'Internal Server Error',
+                'errors' => $exception,
+            ], 500);
+        }
+    }
+
+    public function getMenuDetail($menu_id)
+    {
         $validateId = Validator::make(['menu_id' => $menu_id], [
-            'menu_id' => '|numeric|max:255|exists:merchant_menu_list,id',    
+            'menu_id' => '|numeric|max:255|exists:merchant_menu_list,id',
         ]);
 
         if ($validateId->fails()) {
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validateId->errors(),
             ], 422);
         }
 
@@ -185,19 +233,20 @@ class DashboardController extends Controller
             return response()->json([
                 'code' => 200,
                 'message' => 'Success',
-                'data' => $data
+                'data' => $data,
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }
 
-    public function getUserFavoriteList(Request $request) {
+    public function getMerchantList(Request $request)
+    {
         $user = $request->get('auth_user');
 
         $validateId = Validator::make(['user_id' => $user->id], [
@@ -208,42 +257,9 @@ class DashboardController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validateId->errors(),
             ], 422);
         }
-
-        try {
-            $data = MenuRepository::getUserFavoriteList($user->id);
-
-            return response()->json([
-                'code' => 200,
-                'message' => 'Success',
-                'data' => $data
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'message' => 'Internal Server Error',
-                'errors' => $e
-            ], 500);
-        }
-    }
-
-    public function getMerchantList(Request $request) {
-        $user = $request->get('auth_user');
-
-        $validateId = Validator::make(['user_id' => $user->id], [
-            'user_id' => 'exists:users,id',
-        ]);
-
-        if ($validateId->fails()) {
-            return response()->json([
-                'code' => 422,
-                'message' => 'Validation Error',
-                'errors' => $validateId->errors()
-            ], 422);
-        }   
 
         try {
             $data = MerchantRepository::getMerchantList();
@@ -251,19 +267,20 @@ class DashboardController extends Controller
             return response()->json([
                 'code' => 200,
                 'message' => 'Success',
-                'data' => $data
+                'data' => $data,
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }
 
-    public function getRecommendedMenu(Request $request) {
+    public function getRecommendedMenu(Request $request)
+    {
         $user = $request->get('auth_user');
 
         $validateId = Validator::make(['user_id' => $user->id], [
@@ -274,7 +291,7 @@ class DashboardController extends Controller
             return response()->json([
                 'code' => 422,
                 'message' => 'Validation Error',
-                'errors' => $validateId->errors()
+                'errors' => $validateId->errors(),
             ], 422);
         }
 
@@ -284,59 +301,14 @@ class DashboardController extends Controller
             return response()->json([
                 'code' => 200,
                 'message' => 'Success',
-                'data' => $data
+                'data' => $data,
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'message' => 'Internal Server Error',
-                'errors' => $e
-            ], 500);
-        }
-    }
-
-    public function userFavoriteHandler(Request $request, $menu_id) {
-        $user = $request->get('auth_user');
-
-        $validateUId = Validator::make(['user_id' => $user->id], [
-            'user_id' => 'exists:users,id',
-        ]);
-
-        if ($validateUId->fails()) {
-            return response()->json([
-                'code' => 422,
-                'message' => 'Validation Error',
-                'errors' => $validateUId->errors()
-            ], 422);
-        }
-
-        $validateId = Validator::make(['menu_id' => $menu_id], [
-            'menu_id' => 'exists:merchant_menu_list,id',
-        ]);
-
-        if ($validateId->fails()) {
-            return response()->json([
-                'code' => 422,
-                'message' => 'Validation Error',
-                'errors' => $validateId->errors()
-            ], 422);
-        }
-
-        try {
-            MenuRepository::userFavoriteHandler($user->id, $menu_id);
-
-            return response()->json([
-                'code' => 200,
-                'message' => 'Success',
-                'data' => null,
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'message' => 'Internal Server Error',
-                'errors' => $e
+                'errors' => $e,
             ], 500);
         }
     }

@@ -10,7 +10,7 @@ class ReportRepository
     {
         $query = DB::table('user_orders')
             ->where('merchant_id', $merchant_id)
-            ->where(DB::raw('TO_DAYS(created_at)'), DB::raw('TO_DAYS(NOW())'))
+            ->whereDate('created_at', now()->toDateString())
             ->where('is_paid', 1)
             ->sum('bill');
 
@@ -23,7 +23,7 @@ class ReportRepository
             ->where('merchant_id', $merchant_id)
             ->where('status', '3')
             ->where('is_paid', 1)
-            ->where(DB::raw('TO_DAYS(created_at)'), DB::raw('TO_DAYS(NOW())'))
+            ->whereDate('created_at', now()->toDateString())
             ->offset(($page - 1) * $limit)
             ->limit($limit)
             ->get();
@@ -57,9 +57,10 @@ class ReportRepository
             ->where('merchant_id', $merchant_id)
             ->where('status', '3')
             ->where('is_paid', 1)
-            ->whereBetween(DB::raw('TO_DAYS(created_at)'), [DB::raw('TO_DAYS("'.$start_date.'")'), DB::raw('TO_DAYS("'.$end_date.'")')])
-            ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(bill) as total_income'), DB::raw('COUNT(id) as total_order'))
-            ->groupBy(DB::raw('DATE(created_at)'))
+            ->whereDate('created_at', '>=', $start_date)
+            ->whereDate('created_at', '<=', $end_date)
+            ->selectRaw('DATE(created_at) as date, SUM(bill) as total_income, COUNT(id) as total_order')
+            ->groupByRaw('DATE(created_at)')
             ->get();
 
         $totalIncome = $query->sum('total_income');

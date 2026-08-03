@@ -113,9 +113,6 @@ class UserRepository
                 ->where('user_id', $userId)
                 ->orWhere('merchant_id', $userId)
                 ->count(),
-            'ratings' => DB::table('menu_ratings')->where('user_id', $userId)->count(),
-            'favorites' => DB::table('user_favorite_menu')->where('user_id', $userId)->count(),
-            'wishlists' => DB::table('user_wishlist')->where('user_id', $userId)->count(),
         ];
     }
 

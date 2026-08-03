@@ -175,6 +175,23 @@ class OrderController extends Controller
 
         try {
             $userOrder = OrderRepository::getListTempOrder($user->id);
+
+            if ($userOrder->isEmpty()) {
+                return response()->json([
+                    'code' => 422,
+                    'message' => 'Cart is empty',
+                    'errors' => ['cart' => ['Add at least one menu item before creating an order.']],
+                ], 422);
+            }
+
+            if ($userOrder->contains(fn ($order) => (int) $order->merchant_id !== (int) $request->merchant_id)) {
+                return response()->json([
+                    'code' => 422,
+                    'message' => 'Cart contains items from a different merchant',
+                    'errors' => ['merchant_id' => ['The selected merchant does not match every cart item.']],
+                ], 422);
+            }
+
             $totalPrice = 0;
 
             foreach ($userOrder as $order) {

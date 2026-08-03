@@ -6,6 +6,8 @@ Complete endpoint, request-body, response, authentication, and usage documentati
 
 Order queue numbers are generated transactionally per Merchant per day and returned by order creation and order-query APIs.
 
+Menu ratings, Buyer wishlists, and favorite-menu functionality have been removed. The cleanup migration deletes any existing records in those obsolete tables.
+
 ## Requirements
 
 - PHP 8.2 or newer
@@ -86,7 +88,7 @@ All Admin endpoints are under `/api/v1/admin` and require the `admin` role.
 | `PUT` | `/locations/{location_id}` | Rename a location |
 | `DELETE` | `/locations/{location_id}` | Delete an unused location |
 
-User deletion is implemented as account deactivation so orders, menus, ratings, favorites, wishlists, and other historical records remain valid. Locations referenced by orders cannot be deleted.
+User deletion is implemented as account deactivation so orders, menus, and other historical records remain valid. Locations referenced by orders cannot be deleted.
 
 ## Validation
 

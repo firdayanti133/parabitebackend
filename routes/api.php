@@ -85,11 +85,6 @@ Route::prefix('v1')->group(function () {
                 Route::get('/stat', [UserProfileController::class, 'getUserOrderStats']);
             });
 
-            Route::prefix('favorite')->group(function () {
-                Route::get('/', [UserDashboardController::class, 'getUserFavoriteList']);
-                Route::put('/{menu_id}', [UserDashboardController::class, 'userFavoriteHandler']);
-            });
-
             Route::get('/locations', [UserLocationController::class, 'getListLocations']);
         });
     });
@@ -102,8 +97,6 @@ Route::prefix('v1')->group(function () {
             Route::prefix('menu')->group(function () {
                 Route::get('/list', [MerchantDashboardController::class, 'getListMenu']);
                 Route::get('/detail/{menu_id}', [MerchantMenuController::class, 'getMenuDetail']);
-                Route::get('/favorite', [MerchantDashboardController::class, 'getFavoriteMenu']);
-
                 Route::post('/', [MerchantMenuController::class, 'createMenu']);
                 Route::put('/{menu_id}', [MerchantMenuController::class, 'updateMenu']);
                 Route::delete('/{menu_id}', [MerchantMenuController::class, 'deleteMenu']);
