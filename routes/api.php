@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\LocationController as AdminLocationController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Merchant\DashboardController as MerchantDashboardController;
 use App\Http\Controllers\Merchant\MenuController as MerchantMenuController;
@@ -22,6 +23,10 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('v1')->group(function () {
+    Route::get('/assets/menu/{filename}', [AssetController::class, 'menuImage'])
+        ->where('filename', '[A-Za-z0-9][A-Za-z0-9._-]*\.(?:jpe?g|png)')
+        ->name('assets.menu.show');
+
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth');
