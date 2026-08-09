@@ -93,6 +93,8 @@
                     const data = await apiCall(`/admin/locations/${this.locationId}`);
                     if (data.code === 200) {
                         this.formData.name = data.data.name;
+                    } else {
+                        this.errorMessage = data.message || 'Gagal memuat data lokasi.';
                     }
                 } catch (error) {
                     console.error('Error loading location:', error);
@@ -117,7 +119,7 @@
                     });
                     
                     if (data.code === 200 || data.code === 201) {
-                        alert(this.isEdit ? 'Lokasi berhasil diperbarui' : 'Lokasi berhasil ditambahkan');
+                        queueAdminNotification(this.isEdit ? 'Lokasi berhasil diperbarui.' : 'Lokasi berhasil ditambahkan.');
                         window.location.href = '{{ route("admin.locations.index") }}';
                     } else if (data.code === 422) {
                         this.errors = data.errors || {};
@@ -136,4 +138,3 @@
     }
 </script>
 @endpush
-

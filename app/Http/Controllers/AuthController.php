@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Repositories\Merchant\MerchantRepository;
 use App\Http\Repositories\User\UserRepository;
 use App\Models\User;
+use App\Rules\PhoneNumber;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -22,7 +23,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'phone_number' => 'required|string|max:255',
+            'phone_number' => ['required', 'string', new PhoneNumber],
             'password' => 'required|string|min:8',
             'confirmed_password' => 'required|string|min:8|same:password',
         ]);
@@ -41,7 +42,7 @@ class AuthController extends Controller
             $data = [
                 'name' => $request->name,
                 'email' => $request->email,
-                'phone_number' => $request->phone_number,
+                'phone_number' => trim($request->phone_number),
                 'password' => $password,
             ];
 
@@ -66,7 +67,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'phone_number' => 'required|string|max:255',
+            'phone_number' => ['required', 'string', new PhoneNumber],
             'password' => 'required|string|min:8',
             'confirmed_password' => 'required|string|min:8|same:password',
         ]);
@@ -85,7 +86,7 @@ class AuthController extends Controller
             $data = [
                 'name' => $request->name,
                 'email' => $request->email,
-                'phone_number' => $request->phone_number,
+                'phone_number' => trim($request->phone_number),
                 'password' => $password,
             ];
 

@@ -3,12 +3,15 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Rules\PhoneNumber;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class CreateAdminUser extends Command
 {
     protected $signature = 'admin:create {--list : List existing admin users}';
+
     protected $description = 'Create a new admin user or list existing admins';
 
     public function handle()
@@ -18,25 +21,39 @@ class CreateAdminUser extends Command
         }
 
         $this->info('=== Create New Admin User ===');
-        
+
         $name = $this->ask('Nama lengkap');
         $email = $this->ask('Email');
-        $phone = $this->ask('No. Telepon');
+        $phone = trim((string) $this->ask('No. Telepon'));
         $password = $this->secret('Password (min 8 karakter)');
         $confirmPassword = $this->secret('Konfirmasi Password');
 
         if ($password !== $confirmPassword) {
             $this->error('Password tidak cocok!');
+
             return 1;
         }
 
         if (strlen($password) < 8) {
             $this->error('Password minimal 8 karakter!');
+
+            return 1;
+        }
+
+        $phoneValidator = Validator::make(
+            ['phone_number' => $phone],
+            ['phone_number' => ['required', 'string', new PhoneNumber]]
+        );
+
+        if ($phoneValidator->fails()) {
+            $this->error($phoneValidator->errors()->first('phone_number'));
+
             return 1;
         }
 
         if (User::where('email', $email)->exists()) {
             $this->error('Email sudah terdaftar!');
+
             return 1;
         }
 
@@ -45,7 +62,7 @@ class CreateAdminUser extends Command
             'email' => $email,
             'phone_number' => $phone,
             'role_name' => User::ROLE_ADMIN,
-            'is_merchant' => false,
+            'is_merchant' => 0,
             'is_active' => true,
             'password' => Hash::make($password),
         ]);
@@ -65,18 +82,19 @@ class CreateAdminUser extends Command
 
         if ($admins->isEmpty()) {
             $this->warn('Tidak ada admin user di database.');
+
             return 1;
         }
 
         $this->info('=== Daftar Admin Users ===');
         $this->table(
             ['ID', 'Nama', 'Email', 'No. Telepon', 'Status'],
-            $admins->map(fn($admin) => [
+            $admins->map(fn ($admin) => [
                 $admin->id,
                 $admin->name,
                 $admin->email,
                 $admin->phone_number,
-                $admin->is_active ? 'Aktif' : 'Nonaktif'
+                $admin->is_active ? 'Aktif' : 'Nonaktif',
             ])->toArray()
         );
 

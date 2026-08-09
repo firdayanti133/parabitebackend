@@ -84,9 +84,8 @@
         </p>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script>
-        const API_BASE_URL = '/api/v1';
+        const API_BASE_URL = @json(url('/api/v1'));
         
         document.addEventListener('alpine:init', () => {
             Alpine.data('loginForm', () => ({
@@ -97,6 +96,21 @@
                 errors: {},
                 errorMessage: '',
                 loading: false,
+
+                init() {
+                    const token = localStorage.getItem('admin_token');
+                    let account = null;
+
+                    try {
+                        account = JSON.parse(localStorage.getItem('admin_data') || 'null');
+                    } catch {
+                        localStorage.removeItem('admin_data');
+                    }
+
+                    if (token && account?.role_name === 'admin') {
+                        window.location.replace(@json(route('admin.dashboard')));
+                    }
+                },
                 
                 async handleSubmit() {
                     this.errors = {};
@@ -113,7 +127,7 @@
                             body: JSON.stringify(this.formData)
                         });
                         
-                        const data = await response.json();
+                        const data = await parseApiResponse(response);
                         
                         if (data.code === 200) {
                             if (data.data.account.role_name !== 'admin') {
@@ -124,7 +138,7 @@
                             localStorage.setItem('admin_token', data.data.token);
                             localStorage.setItem('admin_data', JSON.stringify(data.data.account));
                             
-                            window.location.href = '{{ route("admin.dashboard") }}';
+                            window.location.replace(@json(route('admin.dashboard')));
                         } else if (data.code === 422) {
                             this.errors = data.errors || {};
                             this.errorMessage = 'Validasi gagal. Periksa input Anda.';

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Repositories\Admin\UserRepository;
 use App\Models\User;
+use App\Rules\PhoneNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -49,7 +50,7 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'phone_number' => 'required|string|max:255',
+            'phone_number' => ['required', 'string', new PhoneNumber],
             'role_name' => ['required', 'string', Rule::in(User::SUPPORTED_ROLES)],
             'password' => 'required|string|min:8',
             'confirmed_password' => 'required|string|same:password',
@@ -111,7 +112,7 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
-            'phone_number' => 'required|string|max:255',
+            'phone_number' => ['required', 'string', new PhoneNumber],
             'role_name' => ['required', 'string', Rule::in(User::SUPPORTED_ROLES)],
             'is_active' => 'required|boolean',
             'password' => 'sometimes|string|min:8',

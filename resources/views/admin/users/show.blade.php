@@ -5,6 +5,10 @@
 
 @section('content')
 <div x-data="userDetail()" x-init="loadUser()">
+    <div x-show="errorMessage" class="mb-6 bg-red-50 border-l-4 border-red-500 text-red-800 px-6 py-4 rounded-xl shadow-sm" x-cloak>
+        <span x-text="errorMessage"></span>
+    </div>
+
     <div x-show="loading" class="flex justify-center py-20">
         <div class="text-center">
             <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-200 border-t-indigo-600 mb-4"></div>
@@ -148,6 +152,7 @@
             userId: '{{ $id ?? 0 }}',
             user: {},
             related: null,
+            errorMessage: '',
             
             formatDate(dateString) {
                 if (!dateString) return '-';
@@ -162,9 +167,12 @@
                     if (data.code === 200) {
                         this.user = data.data;
                         this.related = data.data.related_records;
+                    } else {
+                        this.errorMessage = data.message || 'Gagal memuat data user.';
                     }
                 } catch (error) {
                     console.error('Error loading user:', error);
+                    this.errorMessage = 'Gagal memuat data user.';
                 } finally {
                     this.loading = false;
                 }
@@ -173,4 +181,3 @@
     }
 </script>
 @endpush
-

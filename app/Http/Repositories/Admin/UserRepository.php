@@ -66,7 +66,7 @@ class UserRepository
             'email' => $data['email'],
             'phone_number' => $data['phone_number'],
             'role_name' => $data['role_name'],
-            'is_merchant' => $data['role_name'] === User::ROLE_MERCHANT,
+            'is_merchant' => $data['role_name'] === User::ROLE_MERCHANT ? '1' : '0',
             'is_active' => true,
             'password' => $data['password'],
             'created_at' => now(),
@@ -81,7 +81,7 @@ class UserRepository
             'email' => $data['email'],
             'phone_number' => $data['phone_number'],
             'role_name' => $data['role_name'],
-            'is_merchant' => $data['role_name'] === User::ROLE_MERCHANT,
+            'is_merchant' => $data['role_name'] === User::ROLE_MERCHANT ? '1' : '0',
             'is_active' => $data['is_active'],
             'updated_at' => now(),
         ];

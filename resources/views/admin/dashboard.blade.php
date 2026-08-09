@@ -5,6 +5,10 @@
 
 @section('content')
 <div x-data="dashboardData()" x-init="loadData()">
+    <div x-show="errorMessage" class="mb-6 bg-red-50 border-l-4 border-red-500 text-red-800 px-6 py-4 rounded-xl shadow-sm" x-cloak>
+        <span x-text="errorMessage"></span>
+    </div>
+
     <div x-show="loading" class="flex items-center justify-center py-20">
         <div class="text-center">
             <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-200 border-t-indigo-600 mb-4"></div>
@@ -150,6 +154,7 @@
                 phone_number: '',
                 role_name: ''
             },
+            errorMessage: '',
             
             async loadData() {
                 if (!checkAuth()) return;
@@ -168,10 +173,12 @@
                         
                         this.admin = data.data.admin || {};
                     } else {
+                        this.errorMessage = data.message || 'Gagal memuat dashboard.';
                         console.error('Failed to load dashboard data:', data);
                     }
                 } catch (error) {
                     console.error('Error loading dashboard:', error);
+                    this.errorMessage = 'Dashboard tidak dapat dimuat. Silakan coba lagi.';
                 } finally {
                     this.loading = false;
                 }

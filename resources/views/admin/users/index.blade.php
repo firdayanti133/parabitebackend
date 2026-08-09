@@ -112,7 +112,13 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <a :href="`{{ route('admin.users.index') }}/${user.id}`" class="text-blue-600 hover:text-blue-900 mr-4 font-semibold">Detail</a>
                                     <a :href="`{{ route('admin.users.index') }}/${user.id}/edit`" class="text-indigo-600 hover:text-indigo-900 mr-4 font-semibold">Edit</a>
-                                    <button @click="confirmDelete(user)" class="text-red-600 hover:text-red-900 font-semibold">Hapus</button>
+                                    <button
+                                        @click="confirmDelete(user)"
+                                        :disabled="!user.is_active"
+                                        :class="user.is_active ? 'text-red-600 hover:text-red-900' : 'text-gray-400 cursor-not-allowed'"
+                                        class="font-semibold disabled:opacity-70"
+                                        x-text="user.is_active ? 'Hapus' : 'Nonaktif'">
+                                    </button>
                                 </td>
                             </tr>
                         </template>
@@ -178,8 +184,8 @@
                     <button @click="deleteModal.show = false" class="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition">
                         Batal
                     </button>
-                    <button @click="deleteUser" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition shadow-lg">
-                        Hapus
+                    <button @click="deleteUser" :disabled="deleting" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span x-text="deleting ? 'Memproses...' : 'Hapus'"></span>
                     </button>
                 </div>
             </div>
@@ -197,6 +203,7 @@
             search: '',
             roleFilter: '',
             errorMessage: '',
+            deleting: false,
             pagination: {
                 page: 1,
                 limit: 10,
@@ -212,28 +219,19 @@
                 const pages = [];
                 const total = this.pagination.total_page;
                 const current = this.pagination.page;
-                
-                if (total <= 7) {
-                    for (let i = 1; i <= total; i++) pages.push(i);
-                } else {
-                    if (current <= 4) {
-                        for (let i = 1; i <= 5; i++) pages.push(i);
-                        pages.push('...');
-                        pages.push(total);
-                    } else if (current >= total - 3) {
-                        pages.push(1);
-                        pages.push('...');
-                        for (let i = total - 4; i <= total; i++) pages.push(i);
-                    } else {
-                        pages.push(1);
-                        pages.push('...');
-                        for (let i = current - 1; i <= current + 1; i++) pages.push(i);
-                        pages.push('...');
-                        pages.push(total);
-                    }
+
+                if (total === 0) return pages;
+
+                const start = Math.max(1, current - 2);
+                const end = Math.min(total, current + 2);
+
+                if (start > 1) pages.push(1);
+                for (let page = start; page <= end; page++) {
+                    pages.push(page);
                 }
+                if (end < total) pages.push(total);
                 
-                return pages;
+                return [...new Set(pages)];
             },
             
             async loadUsers(page = 1) {
@@ -278,12 +276,16 @@
             },
             
             confirmDelete(user) {
+                if (!user.is_active) return;
+
                 this.deleteModal.user = user;
                 this.deleteModal.show = true;
             },
             
             async deleteUser() {
-                if (!this.deleteModal.user) return;
+                if (!this.deleteModal.user || this.deleting) return;
+
+                this.deleting = true;
                 
                 try {
                     const data = await apiCall(`/admin/users/${this.deleteModal.user.id}`, {
@@ -291,19 +293,20 @@
                     });
                     
                     if (data.code === 200) {
-                        alert('User berhasil dinonaktifkan');
+                        showAdminNotification('User berhasil dinonaktifkan.');
                         this.deleteModal.show = false;
                         this.loadUsers(this.pagination.page);
                     } else {
-                        alert(data.message || 'Gagal menghapus user');
+                        showAdminNotification(data.message || 'Gagal menonaktifkan user.', 'error');
                     }
                 } catch (error) {
                     console.error('Error deleting user:', error);
-                    alert('Terjadi kesalahan saat menghapus user');
+                    showAdminNotification('Terjadi kesalahan saat menonaktifkan user.', 'error');
+                } finally {
+                    this.deleting = false;
                 }
             }
         }
     }
 </script>
 @endpush
-

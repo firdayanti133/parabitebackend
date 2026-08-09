@@ -47,7 +47,7 @@
 
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">No. Telepon</label>
-                            <input type="text" x-model="formData.phone_number" required class="block w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+                            <input type="tel" x-model="formData.phone_number" required inputmode="tel" autocomplete="tel" minlength="8" maxlength="16" pattern="\+?[0-9]{8,15}" placeholder="081234567890 atau +6281234567890" class="block w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
                             <p x-show="errors.phone_number" class="mt-2 text-sm text-red-600" x-text="errors.phone_number" x-cloak></p>
                         </div>
 
@@ -166,6 +166,8 @@
                             password: '',
                             confirmed_password: ''
                         };
+                    } else {
+                        this.errorMessage = data.message || 'Gagal memuat data user.';
                     }
                 } catch (error) {
                     console.error('Error loading user:', error);
@@ -196,7 +198,7 @@
                     });
                     
                     if (data.code === 200 || data.code === 201) {
-                        alert(this.isEdit ? 'User berhasil diperbarui' : 'User berhasil ditambahkan');
+                        queueAdminNotification(this.isEdit ? 'User berhasil diperbarui.' : 'User berhasil ditambahkan.');
                         window.location.href = '{{ route("admin.users.index") }}';
                     } else if (data.code === 422) {
                         this.errors = data.errors || {};
@@ -215,4 +217,3 @@
     }
 </script>
 @endpush
-

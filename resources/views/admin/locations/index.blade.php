@@ -143,8 +143,8 @@
                     <button @click="deleteModal.show = false" class="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition">
                         Batal
                     </button>
-                    <button @click="deleteLocation" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition shadow-lg">
-                        Hapus
+                    <button @click="deleteLocation" :disabled="deleting" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span x-text="deleting ? 'Memproses...' : 'Hapus'"></span>
                     </button>
                 </div>
             </div>
@@ -161,6 +161,7 @@
             locations: [],
             search: '',
             errorMessage: '',
+            deleting: false,
             pagination: {
                 page: 1,
                 limit: 10,
@@ -218,28 +219,31 @@
             },
             
             async deleteLocation() {
-                if (!this.deleteModal.location) return;
+                if (!this.deleteModal.location || this.deleting) return;
+
+                this.deleting = true;
                 try {
                     const data = await apiCall(`/admin/locations/${this.deleteModal.location.id}`, {
                         method: 'DELETE'
                     });
                     if (data.code === 200) {
-                        alert('Lokasi berhasil dihapus');
+                        showAdminNotification('Lokasi berhasil dihapus.');
                         this.deleteModal.show = false;
                         this.loadLocations(this.pagination.page);
                     } else if (data.code === 409) {
-                        alert(data.message || 'Lokasi tidak bisa dihapus karena sedang digunakan.');
+                        showAdminNotification(data.message || 'Lokasi tidak bisa dihapus karena sedang digunakan.', 'error');
                         this.deleteModal.show = false;
                     } else {
-                        alert(data.message || 'Gagal menghapus lokasi');
+                        showAdminNotification(data.message || 'Gagal menghapus lokasi.', 'error');
                     }
                 } catch (error) {
                     console.error('Error deleting location:', error);
-                    alert('Terjadi kesalahan saat menghapus lokasi');
+                    showAdminNotification('Terjadi kesalahan saat menghapus lokasi.', 'error');
+                } finally {
+                    this.deleting = false;
                 }
             }
         }
     }
 </script>
 @endpush
-
