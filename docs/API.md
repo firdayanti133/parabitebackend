@@ -49,6 +49,25 @@ Authorization: Bearer <JWT_TOKEN>
 Content-Type: multipart/form-data
 ```
 
+### Menu image URLs and CORS
+
+Menu image fields such as `image` and `menu_image` contain an absolute URL when an image exists:
+
+```text
+https://your-domain.example/api/v1/assets/menu/550e8400-e29b-41d4-a716-446655440000.jpg
+```
+
+The asset endpoint is public, returns the image bytes directly, and includes CORS and long-lived cache headers. Clients must use the returned URL as-is; do not prepend the API base URL. A menu without an image returns `null`, so clients may display their normal placeholder.
+
+Production must set the public HTTPS origin correctly:
+
+```dotenv
+APP_URL=https://your-domain.example
+CORS_ALLOWED_ORIGINS=*
+```
+
+`CORS_ALLOWED_ORIGINS` may instead contain a comma-separated allowlist, for example `https://app.example,http://localhost:53218`. After changing environment values, run `php artisan optimize:clear`.
+
 ## 2. Common Response Format
 
 Every API response uses the same top-level envelope. Successful responses use:
@@ -101,6 +120,7 @@ All HTTP `4xx` and `5xx` responses include `error_code` for programmatic fronten
 | `DUPLICATE_RESOURCE` | A database unique constraint rejected a duplicate |
 | `DATABASE_CONSTRAINT_VIOLATION` | A relational database constraint rejected the operation |
 | `FILE_UPLOAD_FAILED` | Uploaded file could not be stored |
+| `ASSET_NOT_FOUND` | Requested menu image does not exist on the public disk |
 | `ORDER_CART_EMPTY` | Order creation was attempted with an empty cart |
 | `ORDER_CART_MERCHANT_MISMATCH` | Cart items do not all belong to the submitted Merchant |
 | `LOCATION_IN_USE` | Location is referenced by historical orders |
@@ -1473,7 +1493,7 @@ View and update have the same `data` shape with HTTP and JSON code `200`.
         "merchant_name": "Merchant Example",
         "menu_name": "Fried Rice",
         "menu_description": "House fried rice",
-        "menu_image": "storage/img/menu/example.jpg",
+        "menu_image": "https://your-domain.example/api/v1/assets/menu/example.jpg",
         "menu_type": "1",
         "menu_price": 25000,
         "menu_status": "1"
@@ -1499,7 +1519,7 @@ View and update have the same `data` shape with HTTP and JSON code `200`.
         "id": 10,
         "name": "Fried Rice",
         "description": "House fried rice",
-        "image": "storage/img/menu/example.jpg",
+        "image": "https://your-domain.example/api/v1/assets/menu/example.jpg",
         "type": "1",
         "price": 25000,
         "status": "1"
@@ -1521,7 +1541,7 @@ View and update have the same `data` shape with HTTP and JSON code `200`.
     "merchant_name": "Merchant Example",
     "menu_name": "Fried Rice",
     "menu_description": "House fried rice",
-    "menu_image": "storage/img/menu/example.jpg",
+    "menu_image": "https://your-domain.example/api/v1/assets/menu/example.jpg",
     "menu_type": "1",
     "menu_price": 25000,
     "menu_status": "1",
@@ -1578,7 +1598,7 @@ The collection is keyed by Merchant ID:
       "merchant_id": 5,
       "merchant_name": "Merchant Example",
       "menu_name": "Fried Rice",
-      "menu_image": "storage/img/menu/example.jpg",
+      "menu_image": "https://your-domain.example/api/v1/assets/menu/example.jpg",
       "price": 50000,
       "quantity": 2,
       "notes": "No chili"
@@ -1637,7 +1657,7 @@ When the Buyer has no order:
       "total_menu": 1,
       "menu_name": "Fried Rice",
       "merchant_name": "Merchant Example",
-      "menu_image": "storage/img/menu/example.jpg",
+      "menu_image": "https://your-domain.example/api/v1/assets/menu/example.jpg",
       "menu_type": "1",
       "price": 50000,
       "quantity": 2,
@@ -1672,7 +1692,7 @@ When the Buyer has no order:
           "menu_id": 10,
           "menu_name": "Fried Rice",
           "merchant_name": "Merchant Example",
-          "menu_image": "storage/img/menu/example.jpg",
+          "menu_image": "https://your-domain.example/api/v1/assets/menu/example.jpg",
           "menu_type": "1",
           "price": 50000,
           "quantity": 2,
@@ -1716,7 +1736,7 @@ When the Buyer has no order:
         "name": "Fried Rice",
         "type": "1",
         "description": "House fried rice",
-        "image": "storage/img/menu/example.jpg",
+        "image": "https://your-domain.example/api/v1/assets/menu/example.jpg",
         "price": 25000
       }
     ]
@@ -1734,7 +1754,7 @@ When the Buyer has no order:
     "id": 10,
     "name": "Fried Rice",
     "description": "House fried rice",
-    "image": "storage/img/menu/example.jpg",
+    "image": "https://your-domain.example/api/v1/assets/menu/example.jpg",
     "type": "1",
     "nutrition_facts": "500 kcal",
     "price": 25000,
@@ -2172,7 +2192,7 @@ Expected behavior:
 These notes describe the API exactly as currently implemented:
 
 1. Menu type `3` is supported for snacks. Apply all pending migrations before sending snack creation requests.
-2. Merchant menu images are stored on the `public` disk under `img/menu`; run `php artisan storage:link` when serving uploaded files locally.
+2. Merchant menu images are stored on the `public` disk under `img/menu` and served through `/api/v1/assets/menu/{filename}`. The API endpoint does not require a public storage symlink, but `storage/app/public` must be readable and writable by the PHP process.
 3. Migration `2026_08_03_000001_remove_unused_menu_engagement_features` permanently deletes existing menu ratings, Buyer wishlists, and Buyer favorite-menu records. Back up that data before migration if it may be needed later.
 4. Rating, wishlist, and favorite-menu APIs and response fields are no longer supported. Removed URLs return `404` or `405` depending on whether a parameterized route matches the same path.
 5. User deletion through the Admin API means deactivation. The record and its historical relations are retained.
@@ -2187,6 +2207,7 @@ These notes describe the API exactly as currently implemented:
 | `POST` | `/login` | Public |
 | `POST` | `/refresh` | Refreshable JWT |
 | `POST` | `/logout` | Any authenticated role |
+| `GET` | `/assets/menu/{filename}` | Public |
 | `POST` | `/user/register` | Public |
 | `POST` | `/merchant/register` | Public |
 | `GET` | `/admin/dashboard` | Admin |

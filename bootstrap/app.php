@@ -2,7 +2,6 @@
 
 use App\Http\Middleware\ApiResponseMiddleware;
 use App\Http\Middleware\AuthMiddleware;
-use App\Http\Middleware\CorsMiddleware;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,7 +20,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth' => AuthMiddleware::class,
         ]);
-        $middleware->prependToGroup('api', CorsMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (Throwable $exception, Request $request) {
