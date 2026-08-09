@@ -368,7 +368,7 @@ Authentication: not required.
 | --- | --- | --- | --- |
 | `name` | string | Yes | Maximum 255 characters |
 | `email` | string | Yes | Valid email, maximum 255 characters, unique |
-| `phone_number` | string | Yes | Maximum 255 characters |
+| `phone_number` | string | Yes | 8–15 digits; may start with `+` |
 | `password` | string | Yes | Minimum 8 characters |
 | `confirmed_password` | string | Yes | Must match `password` |
 
@@ -622,7 +622,7 @@ POST /admin/users
 | --- | --- | --- | --- |
 | `name` | string | Yes | Maximum 255 characters |
 | `email` | string | Yes | Valid, maximum 255 characters, unique |
-| `phone_number` | string | Yes | Maximum 255 characters |
+| `phone_number` | string | Yes | 8–15 digits; may start with `+` |
 | `role_name` | string | Yes | `admin`, `user`, or `merchant` |
 | `password` | string | Yes | Minimum 8 characters |
 | `confirmed_password` | string | Yes | Must match `password` |
@@ -688,7 +688,7 @@ PUT /admin/users/{user_id}
 | --- | --- | --- | --- |
 | `name` | string | Yes | Maximum 255 characters |
 | `email` | string | Yes | Valid and unique except for this user |
-| `phone_number` | string | Yes | Maximum 255 characters |
+| `phone_number` | string | Yes | 8–15 digits; may start with `+` |
 | `role_name` | string | Yes | `admin`, `user`, or `merchant` |
 | `is_active` | boolean | Yes | `true` or `false` |
 | `password` | string | No | Minimum 8 characters |

@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -22,6 +23,11 @@ class AdminUserManagementTest extends TestCase
         $this->admin = User::factory()->create([
             'role_name' => User::ROLE_ADMIN,
         ]);
+    }
+
+    public function test_merchant_flag_uses_a_boolean_database_column(): void
+    {
+        $this->assertContains(Schema::getColumnType('users', 'is_merchant'), ['boolean', 'tinyint']);
     }
 
     public function test_admin_can_list_users_with_search_role_filter_and_pagination(): void
@@ -96,6 +102,22 @@ class AdminUserManagementTest extends TestCase
         ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('role_name');
+    }
+
+    public function test_alphabetic_phone_number_is_rejected(): void
+    {
+        $this->adminRequest()->postJson('/api/v1/admin/users', [
+            'name' => 'Invalid Phone',
+            'email' => 'invalid-phone@example.com',
+            'phone_number' => 'phone-number',
+            'role_name' => User::ROLE_USER,
+            'password' => 'secure-password',
+            'confirmed_password' => 'secure-password',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('phone_number');
+
+        $this->assertDatabaseMissing('users', ['email' => 'invalid-phone@example.com']);
     }
 
     public function test_admin_can_update_a_user_without_overwriting_the_password(): void

@@ -11,8 +11,8 @@
         .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -10px rgba(59, 130, 246, 0.4); }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div class="min-h-screen flex flex-col lg:flex-row" x-data="adminLayout()">
+<body class="bg-gray-100" x-data="adminLayout()" x-cloak>
+    <div class="min-h-screen flex flex-col lg:flex-row">
         <!-- Sidebar -->
         <aside class="fixed inset-y-0 left-0 w-72 bg-blue-900 text-white transform lg:translate-x-0 transition-transform duration-300 ease-in-out z-40 shadow-2xl" 
                :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
@@ -120,7 +120,7 @@
     </div>
 
     <!-- Overlay untuk Mobile Sidebar -->
-    <div x-show="sidebarOpen" @click="sidebarOpen = false" 
+    <div x-show="sidebarOpen" x-cloak style="display: none" @click="sidebarOpen = false"
          class="fixed inset-0 bg-black/50 backdrop-blur-sm z-20 lg:hidden"
          x-transition:enter="transition-opacity ease-out duration-300"
          x-transition:enter-start="opacity-0"
@@ -129,9 +129,70 @@
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <div
+        x-show="notification.show"
+        x-cloak
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 translate-y-2 sm:translate-y-0 sm:translate-x-2"
+        x-transition:enter-end="opacity-100 translate-y-0 sm:translate-x-0"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100 translate-y-0 sm:translate-x-0"
+        x-transition:leave-end="opacity-0 translate-y-2 sm:translate-y-0 sm:translate-x-2"
+        class="fixed top-4 inset-x-4 sm:inset-x-auto sm:right-6 sm:top-6 z-[60] sm:w-full sm:max-w-sm"
+        role="status"
+        aria-live="polite">
+        <div
+            class="flex items-start gap-3 rounded-2xl border bg-white p-4 shadow-2xl"
+            :class="notification.type === 'success' ? 'border-green-200' : 'border-red-200'">
+            <div
+                class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
+                :class="notification.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'">
+                <svg x-show="notification.type === 'success'" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <svg x-show="notification.type !== 'success'" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </div>
+            <div class="min-w-0 flex-1 pt-0.5">
+                <p class="font-bold text-gray-900" x-text="notification.type === 'success' ? 'Berhasil' : 'Terjadi Kesalahan'"></p>
+                <p class="mt-1 text-sm text-gray-600" x-text="notification.message"></p>
+            </div>
+            <button type="button" @click="dismissNotification" class="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600" aria-label="Tutup notifikasi">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
     <script>
-        const API_BASE_URL = '/api/v1';
+        const API_BASE_URL = @json(url('/api/v1'));
+        const ADMIN_NOTIFICATION_KEY = 'admin_notification';
+        let refreshPromise = null;
+
+        function showAdminNotification(message, type = 'success') {
+            window.dispatchEvent(new CustomEvent('admin-notification', {
+                detail: { message, type }
+            }));
+        }
+
+        function queueAdminNotification(message, type = 'success') {
+            sessionStorage.setItem(ADMIN_NOTIFICATION_KEY, JSON.stringify({ message, type }));
+        }
+
+        function consumeAdminNotification() {
+            const value = sessionStorage.getItem(ADMIN_NOTIFICATION_KEY);
+            sessionStorage.removeItem(ADMIN_NOTIFICATION_KEY);
+
+            if (!value) return null;
+
+            try {
+                return JSON.parse(value);
+            } catch {
+                return null;
+            }
+        }
         
         function getToken() {
             return localStorage.getItem('admin_token');
@@ -147,7 +208,15 @@
         
         function getAdminData() {
             const data = localStorage.getItem('admin_data');
-            return data ? JSON.parse(data) : null;
+
+            if (!data) return null;
+
+            try {
+                return JSON.parse(data);
+            } catch {
+                clearAdminData();
+                return null;
+            }
         }
         
         function setAdminData(data) {
@@ -157,8 +226,56 @@
         function clearAdminData() {
             localStorage.removeItem('admin_data');
         }
+
+        function redirectToLogin() {
+            clearToken();
+            clearAdminData();
+
+            if (window.location.pathname !== @json(route('admin.login', [], false))) {
+                window.location.replace(@json(route('admin.login')));
+            }
+        }
+
+        async function refreshAdminToken() {
+            if (refreshPromise) return refreshPromise;
+
+            const token = getToken();
+            if (!token) return false;
+
+            refreshPromise = (async () => {
+                try {
+                    const response = await fetch(API_BASE_URL + '/refresh', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    const data = await parseApiResponse(response);
+
+                    if (!response.ok || data.code !== 200 || !data.data?.token) {
+                        return false;
+                    }
+
+                    setToken(data.data.token);
+                    setAdminData({
+                        ...(getAdminData() || {}),
+                        ...(data.data.account || {})
+                    });
+
+                    return data.data.account?.role_name === 'admin';
+                } catch (error) {
+                    console.error('Token refresh failed:', error);
+                    return false;
+                }
+            })().finally(() => {
+                refreshPromise = null;
+            });
+
+            return refreshPromise;
+        }
         
-        async function apiCall(url, options = {}) {
+        async function apiCall(url, options = {}, allowRefresh = true) {
             const token = getToken();
             const headers = {
                 'Content-Type': 'application/json',
@@ -176,13 +293,20 @@
                     headers
                 });
                 
-                const data = await response.json();
+                const data = await parseApiResponse(response);
                 
                 if (response.status === 401) {
-                    clearToken();
-                    clearAdminData();
-                    window.location.href = '{{ route("admin.login") }}';
-                    throw new Error('Unauthorized');
+                    if (allowRefresh && url !== '/refresh' && await refreshAdminToken()) {
+                        return apiCall(url, options, false);
+                    }
+
+                    redirectToLogin();
+                    throw new Error(data.message || 'Unauthorized');
+                }
+
+                if (response.status === 403 && data.error_code?.startsWith('AUTH_')) {
+                    redirectToLogin();
+                    throw new Error(data.message || 'Forbidden');
                 }
                 
                 return data;
@@ -194,8 +318,10 @@
         
         function checkAuth() {
             const token = getToken();
-            if (!token) {
-                window.location.href = '{{ route("admin.login") }}';
+            const adminData = getAdminData();
+
+            if (!token || adminData?.role_name !== 'admin') {
+                redirectToLogin();
                 return false;
             }
             return true;
@@ -207,8 +333,16 @@
                 adminName: '',
                 adminInitial: '',
                 currentDate: '',
+                notificationTimer: null,
+                notification: {
+                    show: false,
+                    message: '',
+                    type: 'success'
+                },
                 
                 init() {
+                    if (!checkAuth()) return;
+
                     const adminData = getAdminData();
                     if (adminData) {
                         this.adminName = adminData.name || 'Admin';
@@ -217,6 +351,26 @@
                     
                     this.updateDate();
                     setInterval(() => this.updateDate(), 60000);
+
+                    window.addEventListener('admin-notification', (event) => {
+                        this.showNotification(event.detail.message, event.detail.type);
+                    });
+
+                    const queuedNotification = consumeAdminNotification();
+                    if (queuedNotification) {
+                        this.showNotification(queuedNotification.message, queuedNotification.type);
+                    }
+                },
+
+                showNotification(message, type = 'success') {
+                    clearTimeout(this.notificationTimer);
+                    this.notification = { show: true, message, type };
+                    this.notificationTimer = setTimeout(() => this.dismissNotification(), 4500);
+                },
+
+                dismissNotification() {
+                    clearTimeout(this.notificationTimer);
+                    this.notification.show = false;
                 },
                 
                 updateDate() {
@@ -240,7 +394,7 @@
                     } finally {
                         clearToken();
                         clearAdminData();
-                        window.location.href = '{{ route("admin.login") }}';
+                        window.location.replace(@json(route('admin.login')));
                     }
                 }
             }));
